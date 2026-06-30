@@ -1,0 +1,232 @@
+"""
+Caduceus Tasks API Serializers
+定义任务、任务分配、评论和日志的序列化器
+"""
+from rest_framework import serializers
+from ..models import Task, TaskAssignment, TaskComment, TaskLog
+
+
+class TaskAssignmentSerializer(serializers.ModelSerializer):
+    """
+    任务分配序列化器
+    用于任务执行人信息的读取和展示
+    """
+    # 关联字段的只读展示
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    role_name = serializers.CharField(source='role.name', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = TaskAssignment
+        fields = [
+            'id', 'task', 'user', 'user_name', 'role', 'role_name',
+            'status', 'status_display', 'accepted_at', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'accepted_at', 'created_at', 'updated_at']
+
+
+class TaskCommentSerializer(serializers.ModelSerializer):
+    """
+    任务评论序列化器
+    用于评论的 CRUD 操作
+    """
+    # 作者信息的只读展示
+    author_name = serializers.CharField(source='author.username', read_only=True)
+
+    class Meta:
+        model = TaskComment
+        fields = ['id', 'task', 'author', 'author_name', 'content', 'created_at']
+        read_only_fields = ['id', 'author', 'created_at']
+
+    def create(self, validated_data):
+        """
+        创建评论时自动设置作者为当前用户
+        需要在视图中通过 context 传递 request
+        """
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['author'] = request.user
+        return super().create(validated_data)
+
+
+class TaskLogSerializer(serializers.ModelSerializer):
+    """
+    任务变更日志序列化器
+    用于日志信息的只读展示
+    """
+    operator_name = serializers.CharField(source='operator.username', read_only=True)
+
+    class Meta:
+        model = TaskLog
+        fields = ['id', 'task', 'operator', 'operator_name', 'action', 'changes', 'created_at']
+        read_only_fields = ['id', 'task', 'operator', 'action', 'changes', 'created_at']
+
+
+class TaskSerializer(serializers.ModelSerializer):
+    """
+    任务序列化器
+    用于任务信息的读取和展示
+    """
+    # 创建者信息的只读展示
+    creator_name = serializers.CharField(source='creator.username', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    # 嵌套展示任务分配信息
+    assignments = TaskAssignmentSerializer(many=True, read_only=True)
+
+    # 嵌套展示评论信息（最新的几条）
+    recent_comments = serializers.SerializerMethodField()
+
+    # 关联的资源数量
+    resources_count = serializers.SerializerMethodField()
+
+    # 关联的任务数量
+    related_tasks_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
+        fields = [
+            'id', 'title', 'description', 'status', 'status_display',
+            'creator', 'creator_name', 'pipeline',
+            'fields', 'resources', 'resources_count',
+            'related_tasks', 'related_tasks_count',
+            'share_token', 'share_fields', 'share_expires_at',
+            'assignments', 'recent_comments',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'creator', 'share_token', 'created_at', 'updated_at'
+        ]
+
+    def get_recent_comments(self, obj):
+        """获取最新的 5 条评论"""
+        comments = obj.comments.all()[:5]
+        return TaskCommentSerializer(comments, many=True).data
+
+    def get_resources_count(self, obj):
+        """获取关联资源数量"""
+        return obj.resources.count()
+
+    def get_related_tasks_count(self, obj):
+        """获取关联任务数量"""
+        return obj.related_tasks.count()
+
+
+class TaskCreateSerializer(serializers.ModelSerializer):
+    """
+    任务创建序列化器
+    用于创建新任务，包含初始化逻辑
+    """
+    # 执行人 ID 列表（可选，创建时直接分配）
+    assignee_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text='执行人用户 ID 列表'
+    )
+
+    # 角色 ID 列表（与 assignee_ids 对应）
+    role_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text='角色 ID 列表，与 assignee_ids 一一对应'
+    )
+
+    class Meta:
+        model = Task
+        fields = [
+            'title', 'description', 'status', 'pipeline',
+            'fields', 'assignee_ids', 'role_ids'
+        ]
+
+    def validate(self, data):
+        """验证执行人和角色列表的对应关系"""
+        assignee_ids = data.get('assignee_ids', [])
+        role_ids = data.get('role_ids', [])
+
+        if assignee_ids and role_ids:
+            if len(assignee_ids) != len(role_ids):
+                raise serializers.ValidationError('执行人列表和角色列表长度必须一致')
+
+        return data
+
+    def create(self, validated_data):
+        """
+        创建任务并分配执行人
+        需要在视图中通过 context 传递 request
+        """
+        # 提取分配信息
+        assignee_ids = validated_data.pop('assignee_ids', [])
+        role_ids = validated_data.pop('role_ids', [])
+
+        # 设置创建者
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            validated_data['creator'] = request.user
+
+        # 创建任务
+        task = Task.objects.create(**validated_data)
+
+        # 创建任务分配
+        if assignee_ids and role_ids:
+            from django.contrib.auth import get_user_model
+            from apps.accounts.models import Role
+
+            User = get_user_model()
+            for user_id, role_id in zip(assignee_ids, role_ids):
+                try:
+                    user = User.objects.get(id=user_id)
+                    role = Role.objects.get(id=role_id) if role_id else None
+                    TaskAssignment.objects.create(
+                        task=task,
+                        user=user,
+                        role=role
+                    )
+                except (User.DoesNotExist, Role.DoesNotExist):
+                    # 忽略不存在的用户或角色
+                    pass
+
+        return task
+
+
+class TaskUpdateSerializer(serializers.ModelSerializer):
+    """
+    任务更新序列化器
+    用于更新任务信息，不包含分配逻辑
+    """
+    class Meta:
+        model = Task
+        fields = [
+            'title', 'description', 'status', 'pipeline',
+            'fields', 'resources', 'related_tasks',
+            'share_fields', 'share_expires_at'
+        ]
+
+    def update(self, instance, validated_data):
+        """更新任务，并记录变更"""
+        # 记录变更前的状态
+        old_status = instance.status
+
+        # 更新任务
+        instance = super().update(instance, validated_data)
+
+        # 如果状态变更，记录日志（通过 signals 自动完成）
+        return instance
+
+
+class TaskShareSerializer(serializers.ModelSerializer):
+    """
+    任务分享序列化器
+    用于生成和更新分享配置
+    """
+    class Meta:
+        model = Task
+        fields = ['share_fields', 'share_expires_at']
+
+    def update(self, instance, validated_data):
+        """更新分享配置"""
+        instance.share_fields = validated_data.get('share_fields', instance.share_fields)
+        instance.share_expires_at = validated_data.get('share_expires_at', instance.share_expires_at)
+        instance.save()
+        return instance
