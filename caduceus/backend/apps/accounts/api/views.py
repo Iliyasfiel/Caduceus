@@ -3,7 +3,8 @@ Caduceus Accounts API Views
 提供用户、角色、小组和角色分配的 API 接口
 """
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
@@ -100,12 +101,15 @@ class RoleAssignmentViewSet(viewsets.ModelViewSet):
 
 
 # 认证视图（使用 Django Session 认证）
+@method_decorator(csrf_exempt, name='dispatch')
+@permission_classes([AllowAny])
 class AuthViewSet(viewsets.ViewSet):
     """
     认证 API ViewSet
     提供登录、登出接口
     使用 Django Session 认证
     """
+    permission_classes = [AllowAny]
 
     @action(detail=False, methods=['post'])
     def login(self, request):

@@ -77,27 +77,44 @@ TEMPLATES = [
 # ASGI 应用入口（Channels WebSocket 支持）
 ASGI_APPLICATION = 'config.asgi.application'
 
-# 数据库配置（PostgreSQL）
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'caduceus'),
-        'USER': os.environ.get('POSTGRES_USER', 'caduceus'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'caduceus_password'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+# 数据库配置（支持环境变量切换引擎，默认 PostgreSQL）
+DB_ENGINE = os.environ.get('DB_ENGINE', 'postgresql')
+if DB_ENGINE == 'sqlite':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB', 'caduceus'),
+            'USER': os.environ.get('POSTGRES_USER', 'caduceus'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'caduceus_password'),
+            'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        }
+    }
 
-# Channels channel layer 配置（Redis）
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [(os.environ.get('REDIS_HOST', 'localhost'), int(os.environ.get('REDIS_PORT', 6379)))],
+# Channels channel layer 配置（支持环境变量切换，默认 Redis）
+CHANNEL_BACKEND = os.environ.get('CHANNEL_BACKEND', 'redis')
+if CHANNEL_BACKEND == 'memory':
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [(os.environ.get('REDIS_HOST', 'localhost'), int(os.environ.get('REDIS_PORT', 6379)))],
+            },
+        },
+    }
 
 # CORS 配置（开发环境允许所有来源）
 CORS_ALLOW_ALL_ORIGINS = DEBUG
