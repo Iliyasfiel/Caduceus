@@ -1,52 +1,68 @@
 <!--
 Caduceus 登录页面
-提供用户登录表单，验证用户身份
+表单结构改用 UiInput / UiButton；视觉风格与 Vercel 设计令牌一致。
+业务逻辑（auth 调用 / 跳转）保持不变。
 -->
 <template>
   <div class="login-page">
-    <div class="login-container">
-      <h1>Caduceus</h1>
-      <h2>协同工作平台</h2>
-      <form @submit.prevent="handleLogin">
-        <div class="form-group">
-          <label for="username">用户名</label>
-          <input
-            id="username"
-            v-model="username"
-            type="text"
-            placeholder="请输入用户名"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label for="password">密码</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="请输入密码"
-            required
-          />
-        </div>
-        <button type="submit" :disabled="loading">
-          {{ loading ? '登录中...' : '登录' }}
-        </button>
-        <p v-if="error" class="error">{{ error }}</p>
+    <div class="login-page__topbar">
+      <UiThemeToggle />
+    </div>
+    <div class="login-card">
+      <header class="login-card__brand">
+        <div class="login-card__logo" aria-hidden="true">C</div>
+        <h1 class="login-card__title">Caduceus</h1>
+        <p class="login-card__subtitle">协同工作平台</p>
+      </header>
+
+      <form class="login-card__form" @submit.prevent="handleLogin">
+        <UiInput
+          v-model="username"
+          label="用户名"
+          placeholder="请输入用户名"
+          autocomplete="username"
+          required
+        />
+        <UiInput
+          v-model="password"
+          label="密码"
+          type="password"
+          placeholder="请输入密码"
+          autocomplete="current-password"
+          required
+        />
+
+        <UiButton
+          type="submit"
+          variant="primary"
+          size="lg"
+          :loading="loading"
+          block
+        >
+          {{ loading ? '登录中…' : '登录' }}
+        </UiButton>
+
+        <p v-if="error" class="login-card__error">{{ error }}</p>
       </form>
     </div>
   </div>
 </template>
 
 <script setup>
+/**
+ * Caduceus 登录页面脚本
+ * 业务逻辑零改动：表单状态、auth 调用、登录后跳转逻辑保持原状。
+ */
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { UiButton, UiInput } from '@/components/ui'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-// 表单数据
+// 表单数据（双向绑定到 UiInput，modelValue / update:modelValue 行为与原生 input 一致）
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -77,71 +93,62 @@ async function handleLogin() {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: var(--bg-canvas);
+  padding: var(--space-6);
 }
 
-.login-container {
-  background: white;
-  padding: 40px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+.login-card {
   width: 100%;
   max-width: 400px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-12) var(--space-8);
+  box-shadow: var(--shadow-md);
 }
 
-h1 {
-  font-size: 32px;
-  margin-bottom: 8px;
-  color: #667eea;
+.login-card__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
 }
 
-h2 {
-  font-size: 16px;
-  color: #666;
-  margin-bottom: 32px;
+.login-card__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: var(--text-lg);
 }
 
-.form-group {
-  margin-bottom: 20px;
+.login-card__title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
+.login-card__subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
-input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
+.login-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.error {
-  color: #e74c3c;
-  margin-top: 16px;
+.login-card__error {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-destructive);
+  text-align: center;
 }
 </style>

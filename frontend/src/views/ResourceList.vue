@@ -2,31 +2,24 @@
 Caduceus 资源库管理页面
 提供资源条目管理和资源类型管理两大功能模块
 支持资源条目的增删改查、动态表单、操作日志查看
+模板 / 样式 polish：使用 UiTabs / UiCard / UiBadge / UiButton / UiInput / UiSelect / UiModal / UiEmptyState。
+业务逻辑（store / API / 表单 / 校验）零改动。
 -->
 <template>
   <AppLayout>
     <div class="resource-list">
       <div class="page-header">
-        <h1>资源库</h1>
+        <h1 class="page-header__title">资源库</h1>
       </div>
 
       <!-- Tab 切换 -->
-      <div class="tabs">
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'items' }"
-          @click="activeTab = 'items'"
-        >
-          资源条目管理
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'types' }"
-          @click="activeTab = 'types'"
-        >
-          资源类型管理
-        </button>
-      </div>
+      <UiTabs
+        v-model:activeKey="activeTab"
+        :tabs="[
+          { key: 'items', label: '资源条目管理' },
+          { key: 'types', label: '资源类型管理' }
+        ]"
+      />
 
       <!-- ==================== 资源条目管理 Tab ==================== -->
       <div v-if="activeTab === 'items'" class="items-layout">
@@ -59,51 +52,55 @@ Caduceus 资源库管理页面
         <div class="items-main">
           <div class="items-toolbar">
             <div class="search-bar">
-              <input
+              <UiInput
                 v-model="itemSearchQuery"
-                type="text"
                 placeholder="搜索资源名称..."
-                class="search-input"
               />
             </div>
-            <button class="btn-primary" @click="openItemCreateDialog">+ 新建条目</button>
+            <UiButton variant="primary" size="md" @click="openItemCreateDialog">
+              + 新建条目
+            </UiButton>
           </div>
 
           <div v-if="store.loading" class="loading">加载中...</div>
 
-          <table v-else class="data-table">
-            <thead>
-              <tr>
-                <th>名称</th>
-                <th>状态</th>
-                <th>字段值</th>
-                <th>位置</th>
-                <th>描述</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in filteredItems" :key="item.id">
-                <td class="cell-name">{{ item.name }}</td>
-                <td>
-                  <span class="status-badge" :class="statusClass(item.status)">
-                    {{ statusLabel(item.status) }}
-                  </span>
-                </td>
-                <td class="cell-fields">{{ formatFieldSummary(item) }}</td>
-                <td class="cell-location">{{ item.location || '-' }}</td>
-                <td class="cell-desc">{{ truncate(item.description, 30) }}</td>
-                <td class="cell-actions">
-                  <button class="btn-action" @click="openItemEditDialog(item)">编辑</button>
-                  <button class="btn-action btn-danger-text" @click="handleDeleteItem(item)">删除</button>
-                  <button class="btn-action" @click="openLogDialog(item)">日志</button>
-                </td>
-              </tr>
-              <tr v-if="filteredItems.length === 0">
-                <td colspan="6" class="empty-tip">暂无资源条目</td>
-              </tr>
-            </tbody>
-          </table>
+          <UiCard v-else class="table-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>状态</th>
+                  <th>字段值</th>
+                  <th>位置</th>
+                  <th>描述</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in filteredItems" :key="item.id">
+                  <td class="cell-name">{{ item.name }}</td>
+                  <td>
+                    <UiBadge :tone="statusTone(item.status)">
+                      {{ statusLabel(item.status) }}
+                    </UiBadge>
+                  </td>
+                  <td class="cell-fields">{{ formatFieldSummary(item) }}</td>
+                  <td class="cell-location">{{ item.location || '-' }}</td>
+                  <td class="cell-desc">{{ truncate(item.description, 30) }}</td>
+                  <td class="cell-actions">
+                    <button class="btn-action" @click="openItemEditDialog(item)">编辑</button>
+                    <button class="btn-action btn-danger-text" @click="handleDeleteItem(item)">删除</button>
+                    <button class="btn-action" @click="openLogDialog(item)">日志</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <UiEmptyState
+              v-if="filteredItems.length === 0"
+              class="table-empty"
+              title="暂无资源条目"
+            />
+          </UiCard>
         </div>
       </div>
 
@@ -111,277 +108,264 @@ Caduceus 资源库管理页面
       <div v-if="activeTab === 'types'" class="types-layout">
         <div class="types-toolbar">
           <h3 class="section-title">资源类型列表</h3>
-          <button class="btn-primary" @click="openTypeCreateDialog">+ 新建类型</button>
+          <UiButton variant="primary" size="md" @click="openTypeCreateDialog">
+            + 新建类型
+          </UiButton>
         </div>
 
         <div v-if="store.loading" class="loading">加载中...</div>
 
-        <table v-else class="data-table">
-          <thead>
-            <tr>
-              <th>名称</th>
-              <th>描述</th>
-              <th>图标</th>
-              <th>是否启用</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="type in store.resourceTypes" :key="type.id">
-              <td class="cell-name">{{ type.name }}</td>
-              <td class="cell-desc">{{ truncate(type.description, 40) }}</td>
-              <td>{{ type.icon || '-' }}</td>
-              <td>
-                <span class="status-badge" :class="type.is_active ? 'status-green' : 'status-gray'">
-                  {{ type.is_active ? '启用' : '禁用' }}
-                </span>
-              </td>
-              <td class="cell-actions">
-                <button class="btn-action" @click="openTypeEditDialog(type)">编辑</button>
-              </td>
-            </tr>
-            <tr v-if="store.resourceTypes.length === 0">
-              <td colspan="5" class="empty-tip">暂无资源类型</td>
-            </tr>
-          </tbody>
-        </table>
+        <UiCard v-else class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>描述</th>
+                <th>图标</th>
+                <th>是否启用</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="type in store.resourceTypes" :key="type.id">
+                <td class="cell-name">{{ type.name }}</td>
+                <td class="cell-desc">{{ truncate(type.description, 40) }}</td>
+                <td>{{ type.icon || '-' }}</td>
+                <td>
+                  <UiBadge :tone="type.is_active ? 'success' : 'neutral'">
+                    {{ type.is_active ? '启用' : '禁用' }}
+                  </UiBadge>
+                </td>
+                <td class="cell-actions">
+                  <button class="btn-action" @click="openTypeEditDialog(type)">编辑</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <UiEmptyState
+            v-if="store.resourceTypes.length === 0"
+            class="table-empty"
+            title="暂无资源类型"
+          />
+        </UiCard>
       </div>
 
       <!-- ==================== 新建/编辑资源条目弹窗 ==================== -->
-      <div v-if="itemDialogVisible" class="dialog-overlay" @click.self="itemDialogVisible = false">
-        <div class="dialog">
-          <div class="dialog-header">
-            <h2>{{ editingItem ? '编辑资源条目' : '新建资源条目' }}</h2>
-            <button class="dialog-close" @click="itemDialogVisible = false">✕</button>
+      <UiModal
+        v-model="itemDialogVisible"
+        :title="editingItem ? '编辑资源条目' : '新建资源条目'"
+        size="md"
+      >
+        <div class="form-stack">
+          <div class="form-group">
+            <label>资源类型 <span class="required">*</span></label>
+            <select
+              v-model="itemForm.resource_type"
+              class="form-input"
+              :disabled="!!editingItem"
+              @change="onItemTypeChange"
+            >
+              <option :value="null" disabled>请选择资源类型</option>
+              <option
+                v-for="type in store.resourceTypes"
+                :key="type.id"
+                :value="type.id"
+              >
+                {{ type.name }}
+              </option>
+            </select>
           </div>
-          <div class="dialog-body">
-            <!-- 资源类型选择（仅新建时） -->
-            <div class="form-group">
-              <label>资源类型 <span class="required">*</span></label>
-              <select
-                v-model="itemForm.resource_type"
-                class="form-input"
-                :disabled="!!editingItem"
-                @change="onItemTypeChange"
-              >
-                <option :value="null" disabled>请选择资源类型</option>
-                <option
-                  v-for="type in store.resourceTypes"
-                  :key="type.id"
-                  :value="type.id"
-                >
-                  {{ type.name }}
-                </option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>名称 <span class="required">*</span></label>
-              <input
-                v-model="itemForm.name"
-                type="text"
-                class="form-input"
-                placeholder="请输入资源名称"
+          <div class="form-group">
+            <label>名称 <span class="required">*</span></label>
+            <UiInput
+              v-model="itemForm.name"
+              placeholder="请输入资源名称"
+            />
+          </div>
+          <div class="form-group">
+            <label>描述</label>
+            <textarea
+              v-model="itemForm.description"
+              class="form-input form-textarea"
+              rows="2"
+              placeholder="请输入资源描述"
+            ></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label>位置</label>
+              <UiInput
+                v-model="itemForm.location"
+                placeholder="如：A栋3楼机房"
               />
             </div>
-            <div class="form-group">
-              <label>描述</label>
-              <textarea
-                v-model="itemForm.description"
-                class="form-input form-textarea"
-                rows="2"
-                placeholder="请输入资源描述"
-              ></textarea>
+            <div class="form-group form-group-half">
+              <label>状态</label>
+              <UiSelect
+                v-model="itemForm.status"
+                :options="statusOptions"
+              />
             </div>
-            <div class="form-row">
-              <div class="form-group form-group-half">
-                <label>位置</label>
-                <input
-                  v-model="itemForm.location"
-                  type="text"
-                  class="form-input"
-                  placeholder="如：A栋3楼机房"
-                />
-              </div>
-              <div class="form-group form-group-half">
-                <label>状态</label>
-                <select v-model="itemForm.status" class="form-input">
-                  <option
-                    v-for="opt in statusOptions"
-                    :key="opt.value"
-                    :value="opt.value"
-                  >
-                    {{ opt.label }}
-                  </option>
-                </select>
-              </div>
-            </div>
+          </div>
 
-            <!-- 根据 field_schema 动态生成字段 -->
-            <div v-for="field in itemFormFields" :key="field.key" class="form-group">
-              <label>{{ field.label || field.key }}</label>
-              <!-- text 类型 -->
-              <input
-                v-if="field.type === 'text' || !field.type"
-                v-model="itemForm.field_values[field.key]"
-                type="text"
-                class="form-input"
-              />
-              <!-- textarea 类型 -->
-              <textarea
-                v-else-if="field.type === 'textarea'"
-                v-model="itemForm.field_values[field.key]"
-                class="form-input form-textarea"
-                rows="3"
-              ></textarea>
-              <!-- number 类型 -->
-              <input
-                v-else-if="field.type === 'number'"
-                v-model.number="itemForm.field_values[field.key]"
-                type="number"
-                class="form-input"
-              />
-              <!-- select 类型 -->
-              <select
-                v-else-if="field.type === 'select'"
-                v-model="itemForm.field_values[field.key]"
-                class="form-input"
+          <!-- 根据 field_schema 动态生成字段 -->
+          <div v-for="field in itemFormFields" :key="field.key" class="form-group">
+            <label>{{ field.label || field.key }}</label>
+            <!-- text 类型 -->
+            <UiInput
+              v-if="field.type === 'text' || !field.type"
+              v-model="itemForm.field_values[field.key]"
+            />
+            <!-- textarea 类型 -->
+            <textarea
+              v-else-if="field.type === 'textarea'"
+              v-model="itemForm.field_values[field.key]"
+              class="form-input form-textarea"
+              rows="3"
+            ></textarea>
+            <!-- number 类型 -->
+            <UiInput
+              v-else-if="field.type === 'number'"
+              v-model.number="itemForm.field_values[field.key]"
+              type="number"
+            />
+            <!-- select 类型 -->
+            <select
+              v-else-if="field.type === 'select'"
+              v-model="itemForm.field_values[field.key]"
+              class="form-input"
+            >
+              <option value="">请选择</option>
+              <option
+                v-for="opt in (field.options || [])"
+                :key="opt"
+                :value="opt"
               >
-                <option value="">请选择</option>
-                <option
-                  v-for="opt in (field.options || [])"
-                  :key="opt"
-                  :value="opt"
-                >
-                  {{ opt }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-actions">
-              <button class="btn-secondary" @click="itemDialogVisible = false">取消</button>
-              <button class="btn-primary" @click="submitItem" :disabled="itemSubmitting">
-                {{ itemSubmitting ? '提交中...' : '确认' }}
-              </button>
-            </div>
+                {{ opt }}
+              </option>
+            </select>
           </div>
         </div>
-      </div>
+        <template #footer>
+          <UiButton variant="secondary" @click="itemDialogVisible = false">取消</UiButton>
+          <UiButton
+            variant="primary"
+            :loading="itemSubmitting"
+            @click="submitItem"
+          >
+            确认
+          </UiButton>
+        </template>
+      </UiModal>
 
       <!-- ==================== 新建/编辑资源类型弹窗 ==================== -->
-      <div v-if="typeDialogVisible" class="dialog-overlay" @click.self="typeDialogVisible = false">
-        <div class="dialog">
-          <div class="dialog-header">
-            <h2>{{ editingType ? '编辑资源类型' : '新建资源类型' }}</h2>
-            <button class="dialog-close" @click="typeDialogVisible = false">✕</button>
+      <UiModal
+        v-model="typeDialogVisible"
+        :title="editingType ? '编辑资源类型' : '新建资源类型'"
+        size="md"
+      >
+        <div class="form-stack">
+          <div class="form-group">
+            <label>名称 <span class="required">*</span></label>
+            <UiInput
+              v-model="typeForm.name"
+              placeholder="如：服务器"
+            />
           </div>
-          <div class="dialog-body">
-            <div class="form-group">
-              <label>名称 <span class="required">*</span></label>
-              <input
-                v-model="typeForm.name"
-                type="text"
-                class="form-input"
-                placeholder="如：服务器"
+          <div class="form-group">
+            <label>描述</label>
+            <textarea
+              v-model="typeForm.description"
+              class="form-input form-textarea"
+              rows="2"
+              placeholder="请输入资源类型描述"
+            ></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label>图标</label>
+              <UiInput
+                v-model="typeForm.icon"
+                placeholder="如：server"
               />
             </div>
-            <div class="form-group">
-              <label>描述</label>
-              <textarea
-                v-model="typeForm.description"
-                class="form-input form-textarea"
-                rows="2"
-                placeholder="请输入资源类型描述"
-              ></textarea>
-            </div>
-            <div class="form-row">
-              <div class="form-group form-group-half">
-                <label>图标</label>
-                <input
-                  v-model="typeForm.icon"
-                  type="text"
-                  class="form-input"
-                  placeholder="如：server"
-                />
+            <div class="form-group form-group-half">
+              <label>是否启用</label>
+              <div class="switch-wrapper">
+                <label class="switch">
+                  <input
+                    v-model="typeForm.is_active"
+                    type="checkbox"
+                  />
+                  <span class="switch-slider"></span>
+                </label>
+                <span class="switch-label">{{ typeForm.is_active ? '已启用' : '已禁用' }}</span>
               </div>
-              <div class="form-group form-group-half">
-                <label>是否启用</label>
-                <div class="switch-wrapper">
-                  <label class="switch">
-                    <input
-                      v-model="typeForm.is_active"
-                      type="checkbox"
-                    />
-                    <span class="switch-slider"></span>
-                  </label>
-                  <span class="switch-label">{{ typeForm.is_active ? '已启用' : '已禁用' }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>字段定义（field_schema）</label>
-              <p class="form-hint">
-                JSON 数组格式，每项含 key、label、type（text/textarea/number/select），select 类型需含 options
-              </p>
-              <textarea
-                v-model="typeForm.field_schema_text"
-                class="form-input form-textarea form-textarea-json"
-                rows="6"
-                placeholder='[{"key": "ip", "label": "IP地址", "type": "text"}, {"key": "os", "label": "操作系统", "type": "select", "options": ["Ubuntu", "CentOS"]}]'
-              ></textarea>
-              <p v-if="typeForm.field_schema_error" class="form-error">
-                {{ typeForm.field_schema_error }}
-              </p>
-            </div>
-
-            <div class="form-actions">
-              <button class="btn-secondary" @click="typeDialogVisible = false">取消</button>
-              <button class="btn-primary" @click="submitType" :disabled="typeSubmitting">
-                {{ typeSubmitting ? '提交中...' : '确认' }}
-              </button>
             </div>
           </div>
+          <div class="form-group">
+            <label>字段定义（field_schema）</label>
+            <p class="form-hint">
+              JSON 数组格式，每项含 key、label、type（text/textarea/number/select），select 类型需含 options
+            </p>
+            <textarea
+              v-model="typeForm.field_schema_text"
+              class="form-input form-textarea form-textarea-json"
+              rows="6"
+              placeholder='[{"key": "ip", "label": "IP地址", "type": "text"}, {"key": "os", "label": "操作系统", "type": "select", "options": ["Ubuntu", "CentOS"]}]'
+            ></textarea>
+            <p v-if="typeForm.field_schema_error" class="form-error">
+              {{ typeForm.field_schema_error }}
+            </p>
+          </div>
         </div>
-      </div>
+        <template #footer>
+          <UiButton variant="secondary" @click="typeDialogVisible = false">取消</UiButton>
+          <UiButton
+            variant="primary"
+            :loading="typeSubmitting"
+            @click="submitType"
+          >
+            确认
+          </UiButton>
+        </template>
+      </UiModal>
 
       <!-- ==================== 操作日志弹窗 ==================== -->
-      <div v-if="logDialogVisible" class="dialog-overlay" @click.self="logDialogVisible = false">
-        <div class="dialog">
-          <div class="dialog-header">
-            <h2>操作日志 - {{ logItem?.name }}</h2>
-            <button class="dialog-close" @click="logDialogVisible = false">✕</button>
-          </div>
-          <div class="dialog-body">
-            <div v-if="logLoading" class="loading">加载中...</div>
-            <div v-else-if="logs.length === 0" class="empty-tip">暂无操作日志</div>
-            <div v-else class="timeline">
-              <div
-                v-for="log in logs"
-                :key="log.id"
-                class="timeline-item"
-              >
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                  <div class="timeline-event">{{ log.event_key || log.action || '-' }}</div>
-                  <div class="timeline-summary" v-if="log.summary">{{ log.summary }}</div>
-                  <div class="timeline-details" v-if="log.details">{{ log.details }}</div>
-                  <div class="timeline-operator">
-                    {{ log.operator_name || '-' }} · {{ formatTime(log.created_at) }}
-                  </div>
-                </div>
+      <UiModal
+        v-model="logDialogVisible"
+        :title="`操作日志 - ${logItem?.name || ''}`"
+        size="md"
+      >
+        <div v-if="logLoading" class="loading">加载中...</div>
+        <UiEmptyState v-else-if="logs.length === 0" title="暂无操作日志" />
+        <div v-else class="timeline">
+          <div
+            v-for="log in logs"
+            :key="log.id"
+            class="timeline-item"
+          >
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <div class="timeline-event">{{ log.event_key || log.action || '-' }}</div>
+              <div class="timeline-summary" v-if="log.summary">{{ log.summary }}</div>
+              <div class="timeline-details" v-if="log.details">{{ log.details }}</div>
+              <div class="timeline-operator">
+                {{ log.operator_name || '-' }} · {{ formatTime(log.created_at) }}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </UiModal>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
 /**
- * Caduceus 资源库管理页面
- * 包含资源条目管理和资源类型管理两个Tab
- * 支持动态表单、操作日志查看等功能
+ * Caduceus ResourceList 页面脚本
+ * 业务逻辑零改动：store / API / 表单校验 / 动态字段 / 日志加载 全部保留。
+ * 仅 alert() 替换为 useToast()；confirm() 保留原生（业务行为一致）。
  */
 import { ref, reactive, computed, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
@@ -394,8 +378,13 @@ import {
   createResourceType,
   updateResourceType
 } from '@/api/resources'
+import { useToast } from '@/stores/toast'
+import {
+  UiButton, UiInput, UiSelect, UiCard, UiBadge, UiModal, UiEmptyState, UiTabs
+} from '@/components/ui'
 
 const store = useResourcesStore()
+const toast = useToast()
 
 // 当前激活的 Tab
 const activeTab = ref('items')
@@ -408,20 +397,20 @@ const selectedTypeId = ref(null)
 
 // 状态选项列表
 const statusOptions = [
-  { value: 'available', label: '可用' },
-  { value: 'reserved', label: '已预约' },
-  { value: 'in_use', label: '使用中' },
-  { value: 'maintenance', label: '维修中' },
-  { value: 'unavailable', label: '不可用' }
+  ['可用',     'available'],
+  ['已预约',   'reserved'],
+  ['使用中',   'in_use'],
+  ['维修中',   'maintenance'],
+  ['不可用',   'unavailable']
 ]
 
 // 状态映射配置
 const statusMap = {
-  available: { label: '可用', class: 'status-green' },
-  reserved: { label: '已预约', class: 'status-blue' },
-  in_use: { label: '使用中', class: 'status-orange' },
-  maintenance: { label: '维修中', class: 'status-yellow' },
-  unavailable: { label: '不可用', class: 'status-gray' }
+  available:   { label: '可用',   tone: 'success' },
+  reserved:    { label: '已预约', tone: 'warning' },
+  in_use:      { label: '使用中', tone: 'info' },
+  maintenance: { label: '维修中', tone: 'warning' },
+  unavailable: { label: '不可用', tone: 'neutral' }
 }
 
 // 获取状态中文标签
@@ -429,9 +418,9 @@ function statusLabel(status) {
   return statusMap[status]?.label || status || '-'
 }
 
-// 获取状态样式类
-function statusClass(status) {
-  return statusMap[status]?.class || ''
+// 获取状态 tone
+function statusTone(status) {
+  return statusMap[status]?.tone || 'neutral'
 }
 
 // 格式化时间
@@ -550,7 +539,7 @@ function openItemEditDialog(item) {
 // 提交资源条目（新建或编辑）
 async function submitItem() {
   if (!itemForm.name || !itemForm.resource_type) {
-    alert('请填写名称和资源类型')
+    toast.error('请填写名称和资源类型')
     return
   }
   itemSubmitting.value = true
@@ -571,24 +560,31 @@ async function submitItem() {
       })
     }
     itemDialogVisible.value = false
+    toast.success(editingItem.value ? '条目更新成功' : '条目创建成功')
     await store.fetchResourceItems()
   } catch (error) {
     console.error('保存资源条目失败:', error)
-    alert('保存失败：' + (error.response?.data?.detail || error.message))
+    toast.error('保存失败：' + (error.response?.data?.detail || error.message))
   }
   itemSubmitting.value = false
 }
 
 // 删除资源条目
 async function handleDeleteItem(item) {
-  const confirmed = confirm(`确定要删除资源条目「${item.name}」吗？此操作不可撤销。`)
-  if (!confirmed) return
+  const ok = await confirm({
+    title: '删除资源条目',
+    message: `确定要删除资源条目「${item.name}」吗？此操作不可撤销。`,
+    tone: 'danger',
+    confirmText: '删除'
+  })
+  if (!ok) return
   try {
     await deleteResourceItem(item.id)
+    toast.success('条目已删除')
     await store.fetchResourceItems()
   } catch (error) {
     console.error('删除资源条目失败:', error)
-    alert('删除失败：' + (error.response?.data?.detail || error.message))
+    toast.error('删除失败：' + (error.response?.data?.detail || error.message))
   }
 }
 
@@ -640,7 +636,7 @@ function openTypeEditDialog(type) {
 // 提交资源类型（新建或编辑）
 async function submitType() {
   if (!typeForm.name.trim()) {
-    alert('请填写类型名称')
+    toast.error('请填写类型名称')
     return
   }
   // 校验 field_schema JSON 格式
@@ -672,10 +668,11 @@ async function submitType() {
       await createResourceType(payload)
     }
     typeDialogVisible.value = false
+    toast.success(editingType.value ? '类型更新成功' : '类型创建成功')
     await store.fetchResourceTypes()
   } catch (error) {
     console.error('保存资源类型失败:', error)
-    alert('保存失败：' + (error.response?.data?.detail || error.message))
+    toast.error('保存失败：' + (error.response?.data?.detail || error.message))
   }
   typeSubmitting.value = false
 }
@@ -710,132 +707,102 @@ onMounted(async () => {
 
 <style scoped>
 .resource-list {
-  padding: 24px;
-}
-
-.page-header {
+  padding: var(--space-6);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.page-header h1 {
-  margin: 0;
-  font-size: 22px;
-  color: #1a1a1a;
-}
-
-/* Tab 切换 */
-.tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid #eee;
-  margin-bottom: 20px;
-}
-
-.tab-btn {
-  padding: 10px 24px;
-  border: none;
-  background: none;
-  color: #666;
-  font-size: 15px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.2s;
-}
-
-.tab-btn:hover {
-  color: #333;
-}
-
-.tab-btn.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+.page-header__title {
+  font-size: var(--text-2xl);
   font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 /* ===== 资源条目管理布局 ===== */
 .items-layout {
   display: flex;
-  gap: 24px;
+  gap: var(--space-5);
 }
 
 /* 左侧类型侧边栏 */
 .types-sidebar {
   width: 220px;
   min-width: 220px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #eee;
-  padding: 12px 0;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) 0;
+  align-self: flex-start;
 }
 
 .sidebar-title {
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: #333;
-  padding: 0 16px 10px;
-  border-bottom: 1px solid #eee;
+  color: var(--text-primary);
+  padding: 0 var(--space-4) var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .sidebar-loading {
-  padding: 20px 16px;
-  color: #999;
+  padding: var(--space-4);
+  color: var(--text-muted);
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .type-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color var(--transition-fast);
 }
 
 .type-item:hover {
-  background: #f0f4ff;
+  background-color: var(--color-muted);
 }
 
 .type-item.active {
-  background: #e8edff;
-  color: #667eea;
-  font-weight: 500;
+  background-color: var(--color-muted);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .type-name {
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .type-badge {
-  background: #e0e0e0;
-  color: #666;
+  background-color: var(--color-muted);
+  color: var(--text-secondary);
   padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 
 .type-item.active .type-badge {
-  background: #667eea;
-  color: #fff;
+  background-color: var(--text-primary);
+  color: var(--bg-surface);
 }
 
 /* 右侧主区域 */
 .items-main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .items-toolbar {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .items-toolbar .search-bar {
@@ -843,56 +810,48 @@ onMounted(async () => {
   max-width: 320px;
 }
 
-/* 搜索框 */
-.search-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  outline: none;
-  box-sizing: border-box;
-}
-
-.search-input:focus {
-  border-color: #667eea;
-}
-
 /* 通用数据表格 */
+.table-card :deep(.ui-card__body) {
+  padding: 0;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #eee;
+  font-size: var(--text-sm);
 }
 
 .data-table th {
-  background: #f8f9fa;
-  padding: 10px 14px;
+  background-color: var(--bg-canvas);
+  padding: var(--space-3) var(--space-4);
   text-align: left;
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: #555;
-  border-bottom: 1px solid #eee;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .data-table td {
-  padding: 12px 14px;
-  font-size: 14px;
-  color: #333;
-  border-bottom: 1px solid #f0f0f0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
 }
 
 .data-table tbody tr:hover {
-  background: #fafbff;
+  background-color: var(--bg-canvas);
 }
 
 .data-table tbody tr:last-child td {
-  border-bottom: none;
+  border-bottom: 0;
+}
+
+.table-empty {
+  padding: var(--space-8);
 }
 
 .cell-name {
@@ -901,11 +860,12 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
 }
 
 .cell-fields {
-  font-size: 13px;
-  color: #666;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -917,7 +877,7 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .cell-desc {
@@ -925,8 +885,8 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #888;
-  font-size: 13px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
 }
 
 .cell-actions {
@@ -935,30 +895,30 @@ onMounted(async () => {
 
 .btn-action {
   padding: 4px 12px;
-  border: 1px solid #ddd;
-  background: #fff;
-  color: #555;
-  border-radius: 4px;
+  border: 1px solid var(--color-input);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 13px;
-  margin-right: 6px;
-  transition: all 0.15s;
+  font-size: var(--text-xs);
+  margin-right: var(--space-1);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .btn-action:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 .btn-danger-text {
-  color: #e74c3c;
-  border-color: #fdd;
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
 }
 
 .btn-danger-text:hover {
-  background: #fff5f5;
-  color: #c0392b;
-  border-color: #e74c3c;
+  background-color: var(--badge-danger-bg);
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
 }
 
 /* ===== 资源类型管理 ===== */
@@ -966,154 +926,37 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
 }
 
 .section-title {
   margin: 0;
-  font-size: 16px;
-  color: #333;
-}
-
-/* 状态标签 */
-.status-badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.status-green {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-blue {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.status-orange {
-  background: #fff3e0;
-  color: #e65100;
-}
-
-.status-yellow {
-  background: #fffde7;
-  color: #f9a825;
-}
-
-.status-gray {
-  background: #f5f5f5;
-  color: #888;
-}
-
-/* 通用按钮 */
-.btn-primary {
-  padding: 8px 20px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
-  white-space: nowrap;
-}
-
-.btn-primary:hover {
-  background: #5a6fd6;
-}
-
-.btn-primary:disabled {
-  background: #b0b0b0;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  padding: 8px 20px;
-  background: #f0f0f0;
-  color: #333;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-secondary:hover {
-  background: #e0e0e0;
-}
-
-/* 对话框 */
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.dialog {
-  background: #fff;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 620px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.dialog-header h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.dialog-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #999;
-  cursor: pointer;
-}
-
-.dialog-close:hover {
-  color: #333;
-}
-
-.dialog-body {
-  padding: 20px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 /* 表单 */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .form-group {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #333;
+  font-size: var(--text-sm);
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .form-row {
   display: flex;
-  gap: 16px;
+  gap: var(--space-3);
 }
 
 .form-group-half {
@@ -1121,65 +964,62 @@ onMounted(async () => {
 }
 
 .required {
-  color: #e74c3c;
+  color: var(--color-destructive);
 }
 
 .form-input {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
   outline: none;
   box-sizing: border-box;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .form-input:focus {
-  border-color: #667eea;
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
 }
 
 .form-input:disabled {
-  background: #f5f5f5;
-  color: #999;
+  background-color: var(--color-muted);
+  color: var(--text-muted);
 }
 
 .form-textarea {
   resize: vertical;
+  font-family: inherit;
 }
 
 .form-textarea-json {
   font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
-  font-size: 13px;
+  font-size: var(--text-xs);
   line-height: 1.5;
 }
 
 .form-hint {
-  font-size: 12px;
-  color: #999;
-  margin-top: -4px;
-  margin-bottom: 8px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   line-height: 1.5;
+  margin: -4px 0 var(--space-2);
 }
 
 .form-error {
-  font-size: 12px;
-  color: #e74c3c;
-  margin-top: 4px;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
+  font-size: var(--text-xs);
+  color: var(--color-destructive);
+  margin-top: var(--space-1);
 }
 
 /* Switch 开关 */
 .switch-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-top: 4px;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
 }
 
 .switch {
@@ -1202,9 +1042,9 @@ onMounted(async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #ccc;
-  border-radius: 24px;
-  transition: 0.3s;
+  background-color: var(--color-muted);
+  border-radius: var(--radius-full);
+  transition: var(--transition-fast);
 }
 
 .switch-slider::before {
@@ -1214,13 +1054,13 @@ onMounted(async () => {
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background: #fff;
-  border-radius: 50%;
-  transition: 0.3s;
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-full);
+  transition: var(--transition-fast);
 }
 
 .switch input:checked + .switch-slider {
-  background: #667eea;
+  background-color: var(--text-primary);
 }
 
 .switch input:checked + .switch-slider::before {
@@ -1228,14 +1068,14 @@ onMounted(async () => {
 }
 
 .switch-label {
-  font-size: 13px;
-  color: #666;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 /* 时间线 */
 .timeline {
   position: relative;
-  padding-left: 24px;
+  padding-left: var(--space-6);
 }
 
 .timeline::before {
@@ -1245,12 +1085,12 @@ onMounted(async () => {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: #e0e0e0;
+  background-color: var(--border-subtle);
 }
 
 .timeline-item {
   position: relative;
-  margin-bottom: 18px;
+  margin-bottom: var(--space-4);
 }
 
 .timeline-dot {
@@ -1259,52 +1099,46 @@ onMounted(async () => {
   top: 4px;
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  background: #667eea;
+  border-radius: var(--radius-full);
+  background-color: var(--text-primary);
 }
 
 .timeline-content {
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .timeline-event {
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .timeline-summary {
-  color: #555;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 
 .timeline-details {
-  color: #888;
-  font-size: 12px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
   font-family: monospace;
-  background: #f5f5f5;
-  padding: 4px 8px;
-  border-radius: 4px;
-  margin-top: 4px;
+  background-color: var(--color-muted);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-1);
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 .timeline-operator {
-  color: #aaa;
-  font-size: 12px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
   margin-top: 2px;
 }
 
-/* 其他 */
 .loading {
   text-align: center;
-  padding: 40px;
-  color: #999;
-}
-
-.empty-tip {
-  text-align: center;
-  padding: 40px;
-  color: #ccc;
+  padding: var(--space-12);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 </style>

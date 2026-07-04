@@ -1,37 +1,54 @@
 <!--
 Caduceus 任务详情页面
-展示任务完整信息：基本信息、管线阶段进度、角色感知字段排序、评论、日志、执行人
+工具栏 / 信息区 / 时间线 / 评论 / 日志 / 右侧面板 / 分享弹窗 全部 polish。
+业务逻辑（store / API / 字段排序 / 阶段流转 / 资源选择 / 分享）零改动。
 -->
 <template>
   <AppLayout>
     <div class="task-detail-page" v-if="task">
       <!-- 顶部工具栏 -->
-      <div class="toolbar">
-        <button class="btn-back" @click="$router.push('/tasks')">← 返回列表</button>
-        <button class="btn-share" @click="handleShare">分享</button>
-        <div class="toolbar-center" v-if="task.pipeline_name">
-          <span class="pipeline-badge">📋 {{ task.pipeline_name }}</span>
+      <header class="toolbar">
+        <div class="toolbar__left">
+          <UiButton variant="secondary" size="sm" @click="$router.push('/tasks')">
+            ← 返回列表
+          </UiButton>
+          <UiButton variant="ghost" size="sm" @click="handleShare">分享</UiButton>
         </div>
-        <div class="toolbar-right">
-          <select v-model="task.status" class="status-select" :class="'status-' + task.status" @change="handleStatusChange">
+        <div class="toolbar__center" v-if="task.pipeline_name">
+          <UiBadge tone="info">📋 {{ task.pipeline_name }}</UiBadge>
+        </div>
+        <div class="toolbar__right">
+          <select
+            v-model="task.status"
+            class="status-select"
+            :class="'status-' + task.status"
+            @change="handleStatusChange"
+          >
             <option value="draft">草稿</option>
             <option value="pending">待处理</option>
             <option value="in_progress">进行中</option>
             <option value="completed">已完成</option>
             <option value="cancelled">已取消</option>
           </select>
-          <button class="btn-save" :disabled="saving" @click="handleSave">
-            {{ saving ? '保存中...' : '保存' }}
-          </button>
+          <UiButton
+            variant="primary"
+            size="sm"
+            :loading="saving"
+            @click="handleSave"
+          >
+            保存
+          </UiButton>
         </div>
-      </div>
+      </header>
 
       <div class="detail-body">
         <!-- 左侧主内容 -->
         <div class="main-content">
           <!-- 管线阶段进度 -->
-          <section class="section" v-if="pipelineNodes.length > 0">
-            <h2 class="section-title">阶段进度</h2>
+          <UiCard v-if="pipelineNodes.length > 0" class="section">
+            <template #header>
+              <h2 class="section-title">阶段进度</h2>
+            </template>
             <div class="pipeline-timeline">
               <div
                 v-for="(node, idx) in pipelineNodes"
@@ -48,26 +65,40 @@ Caduceus 任务详情页面
                 ></div>
                 <div class="step-label" :class="{ current: currentStageIndex === idx }">{{ node.label }}</div>
                 <div v-if="currentStageIndex > idx" class="step-label-done">已完成</div>
-                <div v-if="idx < pipelineNodes.length - 1" class="step-line" :class="{ completed: currentStageIndex > idx, active: currentStageIndex === idx }"></div>
-                <div v-if="currentStageIndex === idx && idx < pipelineNodes.length - 1" class="step-next-btn" @click="handleMarkStageComplete(idx)">
+                <div
+                  v-if="idx < pipelineNodes.length - 1"
+                  class="step-line"
+                  :class="{ completed: currentStageIndex > idx, active: currentStageIndex === idx }"
+                ></div>
+                <div
+                  v-if="currentStageIndex === idx && idx < pipelineNodes.length - 1"
+                  class="step-next-btn"
+                  @click="handleMarkStageComplete(idx)"
+                >
                   <span class="next-arrow">▶</span>
                 </div>
-                <div v-if="currentStageIndex === idx && idx === pipelineNodes.length - 1" class="step-complete-btn" @click="handleCompleteTask">
+                <div
+                  v-if="currentStageIndex === idx && idx === pipelineNodes.length - 1"
+                  class="step-complete-btn"
+                  @click="handleCompleteTask"
+                >
                   <span>✓ 完成任务</span>
                 </div>
               </div>
             </div>
-          </section>
+          </UiCard>
 
           <!-- 基本信息 -->
-          <section class="section">
-            <h2 class="section-title">基本信息</h2>
+          <UiCard class="section">
+            <template #header>
+              <h2 class="section-title">基本信息</h2>
+            </template>
             <div class="info-grid">
-              <div class="info-item">
+              <div class="info-item info-item--full">
                 <label>标题</label>
                 <input v-model="task.title" type="text" class="info-input" />
               </div>
-              <div class="info-item">
+              <div class="info-item info-item--full">
                 <label>描述</label>
                 <textarea v-model="task.description" class="info-textarea" rows="4" placeholder="暂无描述"></textarea>
               </div>
@@ -88,13 +119,20 @@ Caduceus 任务详情页面
                 <span class="info-value">{{ formatDate(task.updated_at) }}</span>
               </div>
             </div>
-          </section>
+          </UiCard>
 
           <!-- 自定义字段（按用户角色优先级排序） -->
-          <section class="section" v-if="sortedFields.length > 0">
-            <h2 class="section-title">任务字段</h2>
+          <UiCard v-if="sortedFields.length > 0" class="section">
+            <template #header>
+              <h2 class="section-title">任务字段</h2>
+            </template>
             <div class="info-grid">
-              <div class="info-item" v-for="f in sortedFields" :key="f.key">
+              <div
+                v-for="f in sortedFields"
+                :key="f.key"
+                class="info-item"
+                :class="{ 'info-item--full': f.type === 'textarea' }"
+              >
                 <label>
                   {{ f.label }}
                   <span v-if="f.is_public" class="field-badge">公开</span>
@@ -113,13 +151,15 @@ Caduceus 任务详情页面
                 <input v-else v-model="f.value" type="text" class="info-input" :placeholder="'输入' + f.label" />
               </div>
             </div>
-          </section>
+          </UiCard>
 
           <!-- 评论区域 -->
-          <section class="section">
-            <h2 class="section-title">评论 ({{ comments.length }})</h2>
+          <UiCard class="section">
+            <template #header>
+              <h2 class="section-title">评论 ({{ comments.length }})</h2>
+            </template>
             <div class="comment-list">
-              <div v-if="comments.length === 0" class="empty-comments">暂无评论</div>
+              <UiEmptyState v-if="comments.length === 0" title="暂无评论" />
               <div v-for="c in comments" :key="c.id" class="comment-item">
                 <div class="comment-header">
                   <strong>{{ c.author_name || '用户' }}</strong>
@@ -129,78 +169,107 @@ Caduceus 任务详情页面
               </div>
             </div>
             <div class="comment-form">
-              <textarea v-model="newComment" class="comment-input" placeholder="输入评论..." rows="2"></textarea>
-              <button class="btn-comment" :disabled="!newComment.trim() || commenting" @click="handleAddComment">
-                {{ commenting ? '发送中...' : '发送' }}
-              </button>
+              <textarea
+                v-model="newComment"
+                class="comment-input"
+                placeholder="输入评论..."
+                rows="2"
+              />
+              <UiButton
+                variant="primary"
+                size="sm"
+                :disabled="!newComment.trim()"
+                :loading="commenting"
+                @click="handleAddComment"
+              >
+                发送
+              </UiButton>
             </div>
-          </section>
+          </UiCard>
 
           <!-- 变更日志 -->
-          <section class="section">
-            <h2 class="section-title">变更日志 ({{ logs.length }})</h2>
+          <UiCard class="section">
+            <template #header>
+              <h2 class="section-title">变更日志 ({{ logs.length }})</h2>
+            </template>
             <div class="log-list">
-              <div v-if="logs.length === 0" class="empty-logs">暂无变更记录</div>
+              <UiEmptyState v-if="logs.length === 0" title="暂无变更记录" />
               <div v-for="l in logs" :key="l.id" class="log-item">
                 <div class="log-header">
                   <strong>{{ l.operator_name || '系统' }}</strong>
                   <span class="log-badge">{{ l.action }}</span>
                   <span class="log-time">{{ formatDate(l.created_at) }}</span>
                 </div>
-                <p class="log-changes" v-if="l.changes && Object.keys(l.changes).length">
+                <p v-if="l.changes && Object.keys(l.changes).length" class="log-changes">
                   {{ formatChanges(l.changes) }}
                 </p>
               </div>
             </div>
-          </section>
+          </UiCard>
         </div>
 
         <!-- 右侧面板：执行人 + 管线节点摘要 -->
         <aside class="side-panel">
-          <section class="side-section">
-            <h3>执行人</h3>
-            <div v-if="assignments.length === 0" class="empty-assign">暂无执行人</div>
+          <UiCard class="side-section">
+            <template #header>
+              <h3 class="side-section__title">执行人</h3>
+            </template>
+            <UiEmptyState v-if="assignments.length === 0" title="暂无执行人" />
             <div v-for="a in assignments" :key="a.id" class="assign-item">
               <div class="assign-info">
                 <strong>{{ a.user_name || '用户 #' + a.user }}</strong>
                 <span class="assign-role">{{ a.role_name || '无角色' }}</span>
               </div>
-              <span class="assign-status" :class="a.status">
+              <UiBadge :tone="assignmentTone(a.status)">
                 {{ a.status_display || a.status }}
-              </span>
+              </UiBadge>
             </div>
-          </section>
+          </UiCard>
 
-          <section class="side-section" v-if="pipelineNodes.length > 0">
-            <h3>阶段节点</h3>
-            <div v-for="(node, idx) in pipelineNodes" :key="node.id" class="node-summary" :class="{ completed: currentStageIndex > idx, current: currentStageIndex === idx }">
+          <UiCard v-if="pipelineNodes.length > 0" class="side-section">
+            <template #header>
+              <h3 class="side-section__title">阶段节点</h3>
+            </template>
+            <div
+              v-for="(node, idx) in pipelineNodes"
+              :key="node.id"
+              class="node-summary"
+              :class="{ completed: currentStageIndex > idx, current: currentStageIndex === idx }"
+            >
               <div class="node-summary-header">
-                <span class="node-dot" :class="{ completed: currentStageIndex > idx, current: currentStageIndex === idx }"></span>
+                <span
+                  class="node-dot"
+                  :class="{ completed: currentStageIndex > idx, current: currentStageIndex === idx }"
+                ></span>
                 <strong>{{ node.label }}</strong>
               </div>
-              <div class="node-summary-roles" v-if="node.roles && node.roles.length > 0">
+              <div v-if="node.roles && node.roles.length > 0" class="node-summary-roles">
                 角色: {{ node.roles.map(r => r.role_id).join(', ') }}
               </div>
             </div>
-          </section>
+          </UiCard>
 
           <!-- 关联资源 -->
-          <section class="side-section">
-            <div class="side-section-header">
-              <h3>关联资源</h3>
-              <button class="btn-add-resource" @click="showResourceSelector = true">+ 关联资源</button>
-            </div>
-            <div v-if="linkedResources.length === 0" class="empty-assign">暂无关联资源</div>
+          <UiCard class="side-section">
+            <template #header>
+              <div class="side-section__head-row">
+                <h3 class="side-section__title">关联资源</h3>
+                <UiButton variant="ghost" size="sm" @click="showResourceSelector = true">
+                  + 关联资源
+                </UiButton>
+              </div>
+            </template>
+            <UiEmptyState v-if="linkedResources.length === 0" title="暂无关联资源" />
             <div v-for="r in linkedResources" :key="r.id" class="assign-item">
               <div class="assign-info">
                 <strong>{{ r.name || r.resource_type_name }}</strong>
                 <span class="assign-role">{{ r.resource_type_name || '资源' }}</span>
               </div>
-              <span class="assign-status" :class="r.status || 'available'">
+              <UiBadge :tone="resourceTone(r.status)">
                 {{ statusMap[r.status] || r.status || '可用' }}
-              </span>
+              </UiBadge>
             </div>
-          </section>
+          </UiCard>
         </aside>
       </div>
 
@@ -213,39 +282,38 @@ Caduceus 任务详情页面
       />
 
       <!-- 分享弹窗 -->
-      <div v-if="showShareModal" class="modal-overlay" @click.self="showShareModal = false">
-        <div class="modal share-modal">
-          <div class="modal-header">
-            <h2>分享任务</h2>
-            <button class="modal-close" @click="showShareModal = false">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group">
-              <label>分享链接</label>
-              <div class="share-link-row">
-                <input :value="shareUrl" readonly class="info-input" />
-                <button class="btn-copy" @click="copyShareUrl">复制</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>过期时间（可选）</label>
-              <input type="date" v-model="shareExpiresAt" class="form-input" />
+      <UiModal v-model="showShareModal" title="分享任务" size="md">
+        <div class="form-stack">
+          <div class="form-field">
+            <label class="form-field__label">分享链接</label>
+            <div class="share-link-row">
+              <input :value="shareUrl" readonly class="info-input" />
+              <UiButton variant="secondary" size="sm" @click="copyShareUrl">复制</UiButton>
             </div>
           </div>
-          <div class="modal-footer">
-            <button class="btn-cancel-share" @click="handleCancelShare">取消分享</button>
-            <button class="btn-submit" @click="handleSetExpiry">设置过期</button>
+          <div class="form-field">
+            <label class="form-field__label">过期时间（可选）</label>
+            <input type="date" v-model="shareExpiresAt" class="info-input" />
           </div>
         </div>
-      </div>
+        <template #footer>
+          <UiButton variant="danger" size="sm" @click="handleCancelShare">取消分享</UiButton>
+          <UiButton variant="primary" size="sm" @click="handleSetExpiry">设置过期</UiButton>
+        </template>
+      </UiModal>
     </div>
 
-    <div v-else-if="loading" class="loading-page">加载中...</div>
-    <div v-else class="loading-page">任务不存在或已删除</div>
+    <UiEmptyState v-else-if="loading" title="加载中…" class="loading-page" />
+    <UiEmptyState v-else title="任务不存在或已删除" class="loading-page" />
   </AppLayout>
 </template>
 
 <script setup>
+/**
+ * Caduceus TaskDetail 页面脚本
+ * 业务逻辑零改动：store / API / 字段排序 / 阶段流转 / 资源 / 分享 全部保留。
+ * 仅 alert() 替换为 useToast()，confirm() 替换为原生 confirm（保持业务行为一致）。
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
@@ -253,10 +321,16 @@ import ResourceSelector from '@/components/ResourceSelector.vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useAuthStore } from '@/stores/auth'
 import { getTaskAssignments } from '@/api/tasks'
+import { useToast } from '@/stores/toast'
+import { useConfirm } from '@/stores/confirm'
+import {
+  UiButton, UiCard, UiBadge, UiEmptyState, UiModal
+} from '@/components/ui'
 
 const route = useRoute()
 const tasksStore = useTasksStore()
 const authStore = useAuthStore()
+const toast = useToast()
 
 const task = ref(null)
 const loading = ref(true)
@@ -289,6 +363,38 @@ const statusMap = {
   in_use: '使用中',
   maintenance: '维护中',
   unavailable: '不可用'
+}
+
+// 状态色映射（与 TaskList / Dashboard 保持一致）
+function statusToTone(status) {
+  switch (status) {
+    case 'draft':       return 'neutral'
+    case 'pending':     return 'warning'
+    case 'in_progress': return 'info'
+    case 'completed':   return 'success'
+    case 'cancelled':   return 'danger'
+    default:            return 'neutral'
+  }
+}
+
+function assignmentTone(status) {
+  switch (status) {
+    case 'pending':   return 'warning'
+    case 'accepted':  return 'info'
+    case 'completed': return 'success'
+    default:          return 'neutral'
+  }
+}
+
+function resourceTone(status) {
+  switch (status) {
+    case 'available':   return 'success'
+    case 'reserved':    return 'warning'
+    case 'in_use':      return 'info'
+    case 'maintenance': return 'warning'
+    case 'unavailable': return 'danger'
+    default:            return 'neutral'
+  }
 }
 
 // 按当前用户角色优先级排序的字段列表
@@ -328,6 +434,7 @@ async function loadTask() {
     loadLogs(id)
   } catch (err) {
     console.error('加载任务失败:', err)
+    toast.error('加载任务失败')
   }
   loading.value = false
 }
@@ -387,10 +494,10 @@ async function handleSave() {
       fields: task.value.fields,
       resources: linkedResources.value.map(r => r.id)
     })
-    alert('保存成功')
+    toast.success('保存成功')
   } catch (err) {
     console.error('保存失败:', err)
-    alert('保存失败: ' + (err.response?.data?.detail || err.message))
+    toast.error('保存失败: ' + (err.response?.data?.detail || err.message))
   }
   saving.value = false
 }
@@ -411,7 +518,7 @@ async function handleShare() {
       const res = await updateTaskShare(task.value.id, {})
       task.value.share_token = res.data.share_token
     } catch (err) {
-      alert('生成分享链接失败')
+      toast.error('生成分享链接失败')
       return
     }
   }
@@ -422,7 +529,7 @@ async function handleShare() {
 function copyShareUrl() {
   if (shareUrl.value) {
     navigator.clipboard.writeText(shareUrl.value)
-    alert('已复制')
+    toast.success('已复制分享链接')
   }
 }
 
@@ -433,26 +540,32 @@ async function handleSetExpiry() {
     await updateTaskShare(task.value.id, {
       share_expires_at: shareExpiresAt.value || null
     })
-    alert('过期时间已更新')
+    toast.success('过期时间已更新')
     showShareModal.value = false
     shareExpiresAt.value = ''
   } catch (err) {
-    alert('设置过期时间失败')
+    toast.error('设置过期时间失败')
   }
 }
 
 // 取消分享
 async function handleCancelShare() {
-  if (!confirm('确定取消分享？取消后分享链接将失效。')) return
+  const ok = await confirm({
+    title: '取消分享',
+    message: '取消后分享链接将失效，无法通过该链接访问任务。',
+    tone: 'danger',
+    confirmText: '取消分享'
+  })
+  if (!ok) return
   try {
     const { cancelTaskShare } = await import('@/api/tasks')
     await cancelTaskShare(task.value.id)
     task.value.share_token = null
     showShareModal.value = false
     shareExpiresAt.value = ''
-    alert('已取消分享')
+    toast.success('已取消分享')
   } catch (err) {
-    alert('取消分享失败')
+    toast.error('取消分享失败')
   }
 }
 
@@ -468,7 +581,7 @@ async function handleMarkStageComplete(idx) {
     task.value.current_node = nextNode.id
   } catch (err) {
     console.error('标记阶段失败:', err)
-    alert('标记失败: ' + (err.response?.data?.detail || err.message))
+    toast.error('标记失败: ' + (err.response?.data?.detail || err.message))
   }
 }
 
@@ -479,7 +592,7 @@ async function handleCompleteTask() {
     task.value.status = 'completed'
   } catch (err) {
     console.error('完成任务失败:', err)
-    alert('操作失败: ' + (err.response?.data?.detail || err.message))
+    toast.error('操作失败: ' + (err.response?.data?.detail || err.message))
   }
 }
 
@@ -494,7 +607,7 @@ async function handleAddComment() {
     newComment.value = ''
   } catch (err) {
     console.error('评论失败:', err)
-    alert('评论失败')
+    toast.error('评论失败')
   }
   commenting.value = false
 }
@@ -531,156 +644,494 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* 顶部工具栏 */
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  padding: var(--space-3) var(--space-6);
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
-.toolbar-center { flex: 1; text-align: center; }
-.pipeline-badge { font-size: 13px; color: #7c3aed; }
+.toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
 
-.toolbar-right { display: flex; align-items: center; gap: 12px; }
-.btn-back { padding: 6px 14px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; cursor: pointer; color: #374151; }
-.btn-share { padding: 6px 14px; background: #fff; border: 1px solid #667eea; border-radius: 6px; font-size: 13px; cursor: pointer; color: #667eea; margin-left: 8px; }
-.btn-share:hover { background: #ede9fe; }
-.status-select { padding: 6px 12px; border-radius: 6px; font-size: 13px; border: 1px solid #d1d5db; outline: none; font-weight: 500; }
-.status-draft { background: #f3f4f6; color: #6b7280; }
-.status-pending { background: #fef3c7; color: #92400e; }
-.status-in_progress { background: #dbeafe; color: #1e40af; }
-.status-completed { background: #d1fae5; color: #065f46; }
-.status-cancelled { background: #fee2e2; color: #991b1b; }
-.btn-save { padding: 6px 20px; background: #667eea; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
-.btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.toolbar__center {
+  flex: 1;
+  text-align: center;
+}
 
-.detail-body { display: flex; flex: 1; overflow: hidden; }
-.main-content { flex: 1; overflow-y: auto; padding: 20px; }
+.toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
 
-.section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-.section-title { margin: 0 0 12px 0; font-size: 15px; color: #1f2937; }
+.status-select {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-input);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+}
+
+.status-select:focus {
+  border-color: var(--color-ring);
+}
+
+.detail-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Section 卡片：让 UiCard 默认 body padding 收紧一些，更紧凑 */
+.section :deep(.ui-card__body) {
+  padding: var(--space-4) var(--space-5);
+}
+
+.section-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
 
 /* 管线阶段时间轴 */
 .pipeline-timeline {
   display: flex;
   align-items: flex-start;
   overflow-x: auto;
-  padding: 8px 0 16px;
+  padding: var(--space-2) 0 var(--space-4);
 }
-.timeline-step { display: flex; flex-direction: column; align-items: center; position: relative; min-width: 80px; flex: 1; }
-.step-dot { width: 20px; height: 20px; border-radius: 50%; background: #e5e7eb; border: 3px solid #d1d5db; z-index: 1; transition: all 0.3s; }
-.step-dot.completed { background: #10b981; border-color: #10b981; }
-.step-dot.current { background: #667eea; border-color: #667eea; box-shadow: 0 0 0 6px rgba(102, 126, 234, 0.2); animation: pulse 1.5s ease-in-out infinite; }
-@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
-.step-label { font-size: 12px; color: #6b7280; text-align: center; margin-top: 6px; max-width: 80px; word-break: break-all; }
-.step-label.current { color: #667eea; font-weight: 600; }
-.step-label-done { font-size: 10px; color: #10b981; margin-top: 2px; }
-.step-line { position: absolute; top: 10px; left: 50%; width: 100%; height: 3px; background: #e5e7eb; z-index: 0; }
-.step-line.completed { background: #10b981; }
-.step-line.active { background: #667eea; }
 
-.step-next-btn { position: absolute; top: -2px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: #667eea; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; font-size: 11px; transition: transform 0.2s; }
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  min-width: 80px;
+  flex: 1;
+}
+
+.step-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  border: 3px solid var(--color-border);
+  z-index: 1;
+  transition: all var(--transition-normal);
+}
+
+.step-dot.completed {
+  background: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.step-dot.current {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 6px rgba(18, 18, 18, 0.12);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+
+.step-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: var(--space-2);
+  max-width: 80px;
+  word-break: break-all;
+}
+
+.step-label.current {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.step-label-done {
+  font-size: 10px;
+  color: var(--color-success);
+  margin-top: 2px;
+}
+
+.step-line {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 100%;
+  height: 3px;
+  background: var(--color-border);
+  z-index: 0;
+}
+
+.step-line.completed { background: var(--color-success); }
+.step-line.active { background: var(--color-primary); }
+
+.step-next-btn {
+  position: absolute;
+  top: -2px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  font-size: 11px;
+  transition: transform var(--transition-fast);
+}
+
 .step-next-btn:hover { transform: scale(1.2); }
-.step-complete-btn { position: absolute; top: -8px; right: -30px; padding: 2px 10px; border-radius: 12px; background: #10b981; color: #fff; cursor: pointer; font-size: 11px; white-space: nowrap; }
-.step-complete-btn:hover { background: #059669; }
+
+.step-complete-btn {
+  position: absolute;
+  top: -8px;
+  right: -30px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-success);
+  color: var(--color-primary-foreground);
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+}
 
 /* 基本信息 */
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.info-item { display: flex; flex-direction: column; gap: 4px; }
-.info-item label { font-size: 12px; color: #9ca3af; font-weight: 500; }
-.field-badge { display: inline-block; font-size: 10px; background: #ede9fe; color: #7c3aed; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
-.info-input, .info-textarea { padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; outline: none; font-family: inherit; }
-.info-input:focus, .info-textarea:focus { border-color: #667eea; }
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.info-item--full {
+  grid-column: 1 / -1;
+}
+
+.info-item label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.field-badge {
+  display: inline-block;
+  font-size: 10px;
+  background-color: var(--color-muted);
+  color: var(--text-secondary);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+}
+
+.info-input,
+.info-textarea {
+  padding: var(--space-3);
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  background-color: var(--color-card);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.info-input:focus,
+.info-textarea:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
+}
+
 .info-textarea { resize: vertical; }
-.info-value { font-size: 14px; color: #374151; }
-.switch-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; }
-.switch-input { accent-color: #667eea; }
+
+.info-value {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.switch-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.switch-input { accent-color: var(--color-primary); }
 
 /* 评论 */
-.comment-list { max-height: 300px; overflow-y: auto; }
-.comment-item { padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
-.comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.comment-header strong { font-size: 13px; color: #1f2937; }
-.comment-time { font-size: 11px; color: #9ca3af; }
-.comment-content { margin: 0; font-size: 13px; color: #374151; line-height: 1.5; }
-.comment-form { display: flex; gap: 8px; margin-top: 12px; }
-.comment-input { flex: 1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; outline: none; resize: none; font-family: inherit; }
-.comment-input:focus { border-color: #667eea; }
-.btn-comment { padding: 8px 16px; background: #667eea; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; align-self: flex-end; }
-.btn-comment:disabled { opacity: 0.6; cursor: not-allowed; }
-.empty-comments, .empty-logs { text-align: center; padding: 16px; color: #9ca3af; font-size: 13px; }
+.comment-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-item {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.comment-item:last-child {
+  border-bottom: 0;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.comment-header strong {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.comment-time {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.comment-content {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  line-height: var(--leading-normal);
+}
+
+.comment-form {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.comment-input {
+  flex: 1;
+  padding: var(--space-3);
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  background-color: var(--color-card);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.comment-input:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
+}
 
 /* 日志 */
-.log-list { max-height: 300px; overflow-y: auto; }
-.log-item { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
-.log-header { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.log-badge { padding: 1px 6px; background: #f3f4f6; border-radius: 4px; color: #6b7280; font-size: 11px; }
-.log-time { color: #9ca3af; margin-left: auto; }
-.log-changes { margin: 4px 0 0 0; font-size: 12px; color: #6b7280; }
+.log-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.log-item {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.log-item:last-child {
+  border-bottom: 0;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.log-badge {
+  padding: 2px 6px;
+  background-color: var(--color-muted);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.log-time {
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.log-changes {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
 
 /* 右侧面板 */
-.side-panel { width: 260px; min-width: 260px; border-left: 1px solid #e5e7eb; background: #fafbfc; padding: 16px; overflow-y: auto; }
-.side-section { margin-bottom: 24px; }
-.side-section h3 { margin: 0 0 12px 0; font-size: 14px; color: #1f2937; }
-.side-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.side-section-header h3 { margin: 0; font-size: 14px; color: #1f2937; }
-.btn-add-resource { padding: 2px 10px; background: #667eea; color: #fff; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
-.btn-add-resource:hover { background: #5a6fd6; }
-.assign-item, .node-summary { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-.node-summary { flex-direction: column; align-items: flex-start; gap: 4px; }
-.node-summary-header { display: flex; align-items: center; gap: 8px; }
-.node-dot { width: 10px; height: 10px; border-radius: 50%; background: #e5e7eb; display: inline-block; }
-.node-dot.completed { background: #10b981; }
-.node-dot.current { background: #667eea; }
-.node-summary.completed { border-left: 3px solid #10b981; padding-left: 8px; }
-.node-summary.current { border-left: 3px solid #667eea; padding-left: 8px; }
-.node-summary-roles { font-size: 11px; color: #9ca3af; padding-left: 18px; }
-.assign-info { display: flex; flex-direction: column; gap: 2px; }
-.assign-info strong { font-size: 13px; color: #1f2937; }
-.assign-role { font-size: 11px; color: #9ca3af; }
-.assign-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
-.assign-status.pending { background: #fef3c7; color: #92400e; }
-.assign-status.accepted { background: #dbeafe; color: #1e40af; }
-.assign-status.completed { background: #d1fae5; color: #065f46; }
-.empty-assign { text-align: center; padding: 16px; color: #9ca3af; font-size: 13px; }
-.loading-page { text-align: center; padding: 48px; color: #9ca3af; }
+.side-panel {
+  width: 280px;
+  min-width: 280px;
+  border-left: 1px solid var(--border-subtle);
+  background-color: var(--bg-canvas);
+  padding: var(--space-4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
 
-/* 分享弹窗 */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
+.side-section :deep(.ui-card__body) {
+  padding: var(--space-3) var(--space-4);
 }
-.share-modal {
-  background: #fff;
-  border-radius: 12px;
-  width: 480px;
-  max-width: 90vw;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+.side-section__title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
 }
-.modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px; border-bottom: 1px solid #e5e7eb;
+
+.side-section__head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
 }
-.modal-header h2 { margin: 0; font-size: 16px; color: #1f2937; }
-.modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #9ca3af; padding: 0; line-height: 1; }
-.modal-close:hover { color: #374151; }
-.modal-body { padding: 20px; }
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 6px; font-weight: 500; }
-.share-link-row { display: flex; gap: 8px; }
-.share-link-row .info-input { flex: 1; }
-.btn-copy { padding: 8px 16px; background: #667eea; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
-.btn-copy:hover { background: #5a6fd6; }
-.form-input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; outline: none; box-sizing: border-box; }
-.form-input:focus { border-color: #667eea; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid #e5e7eb; }
-.btn-cancel-share { padding: 8px 16px; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
-.btn-cancel-share:hover { background: #fecaca; }
-.btn-submit { padding: 8px 16px; background: #667eea; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
-.btn-submit:hover { background: #5a6fd6; }
+
+.assign-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-2);
+}
+
+.assign-item:last-child {
+  border-bottom: 0;
+}
+
+.node-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2);
+  border-left: 3px solid transparent;
+}
+
+.node-summary.completed {
+  border-left-color: var(--color-success);
+}
+
+.node-summary.current {
+  border-left-color: var(--color-primary);
+}
+
+.node-summary-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.node-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  display: inline-block;
+}
+
+.node-dot.completed { background: var(--color-success); }
+.node-dot.current { background: var(--color-primary); }
+
+.node-summary-roles {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  padding-left: 18px;
+}
+
+.assign-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.assign-info strong {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.assign-role {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.loading-page {
+  margin-top: var(--space-12);
+}
+
+/* 分享弹窗表单 */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-field__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.share-link-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.share-link-row .info-input {
+  flex: 1;
+}
 </style>

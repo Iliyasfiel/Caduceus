@@ -2,158 +2,170 @@
 Caduceus 管理面板页面
 提供用户管理、角色管理和组管理的完整 CRUD 功能
 支持 Tab 切换、表格展示、弹窗表单编辑、行内操作
+模板 / 样式 polish：使用 UiTabs / UiCard / UiBadge / UiButton / UiInput / UiSelect / UiModal。
+业务逻辑（client API / CRUD / 校验 / 角色同步）零改动。
 -->
 <template>
   <AppLayout>
     <div class="admin-panel">
       <div class="admin-header">
-        <h1>管理面板</h1>
+        <h1 class="admin-header__title">管理面板</h1>
       </div>
 
       <!-- Tab 切换栏 -->
-      <div class="tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          :class="['tab-btn', { active: activeTab === tab.key }]"
-          @click="switchTab(tab.key)"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
+      <UiTabs
+        v-model:activeKey="activeTab"
+        :tabs="tabs"
+      />
 
       <!-- 用户管理 Tab -->
       <div v-if="activeTab === 'users'" class="tab-content">
         <div class="section-header">
           <h2>用户管理</h2>
-          <button class="btn btn-primary" @click="openUserModal()">+ 新建用户</button>
+          <UiButton variant="primary" size="md" @click="openUserModal()">
+            + 新建用户
+          </UiButton>
         </div>
 
         <div v-if="usersLoading" class="loading-text">加载中...</div>
         <div v-else-if="users.length === 0" class="empty-text">暂无用户数据</div>
-        <table v-else class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>用户名</th>
-              <th>邮箱</th>
-              <th>是否启用</th>
-              <th>角色列表</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in users" :key="user.id">
-              <td>{{ user.id }}</td>
-              <td>{{ user.username }}</td>
-              <td>{{ user.email || '-' }}</td>
-              <td>
-                <span :class="['badge', user.is_active ? 'badge-success' : 'badge-danger']">
-                  {{ user.is_active ? '启用' : '禁用' }}
-                </span>
-              </td>
-              <td>{{ formatUserRoles(user) }}</td>
-              <td class="actions-cell">
-                <button class="btn btn-sm btn-outline" @click="openUserModal(user)">编辑</button>
-                <button
-                  :class="['btn', 'btn-sm', user.is_active ? 'btn-warning' : 'btn-success']"
-                  @click="toggleUserActive(user)"
-                >
-                  {{ user.is_active ? '禁用' : '启用' }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <UiCard v-else class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>用户名</th>
+                <th>邮箱</th>
+                <th>是否启用</th>
+                <th>角色列表</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in users" :key="user.id">
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email || '-' }}</td>
+                <td>
+                  <UiBadge :tone="user.is_active ? 'success' : 'danger'">
+                    {{ user.is_active ? '启用' : '禁用' }}
+                  </UiBadge>
+                </td>
+                <td>{{ formatUserRoles(user) }}</td>
+                <td class="actions-cell">
+                  <button class="btn-action" @click="openUserModal(user)">编辑</button>
+                  <button
+                    class="btn-action"
+                    :class="user.is_active ? 'btn-action--warning' : 'btn-action--success'"
+                    @click="toggleUserActive(user)"
+                  >
+                    {{ user.is_active ? '禁用' : '启用' }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </UiCard>
       </div>
 
       <!-- 角色管理 Tab -->
       <div v-if="activeTab === 'roles'" class="tab-content">
         <div class="section-header">
           <h2>角色管理</h2>
-          <button class="btn btn-primary" @click="openRoleModal()">+ 新建角色</button>
+          <UiButton variant="primary" size="md" @click="openRoleModal()">
+            + 新建角色
+          </UiButton>
         </div>
 
         <div v-if="rolesLoading" class="loading-text">加载中...</div>
         <div v-else-if="roles.length === 0" class="empty-text">暂无角色数据</div>
-        <table v-else class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>名称</th>
-              <th>角色类型</th>
-              <th>描述</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="role in roles" :key="role.id">
-              <td>{{ role.id }}</td>
-              <td>{{ role.name }}</td>
-              <td>{{ role.role_type_display }}</td>
-              <td>{{ role.description || '-' }}</td>
-              <td class="actions-cell">
-                <button class="btn btn-sm btn-outline" @click="openRoleModal(role)">编辑</button>
-                <button class="btn btn-sm btn-danger" @click="deleteRole(role)">删除</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <UiCard v-else class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>角色类型</th>
+                <th>描述</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="role in roles" :key="role.id">
+                <td>{{ role.id }}</td>
+                <td>{{ role.name }}</td>
+                <td>{{ role.role_type_display }}</td>
+                <td>{{ role.description || '-' }}</td>
+                <td class="actions-cell">
+                  <button class="btn-action" @click="openRoleModal(role)">编辑</button>
+                  <button class="btn-action btn-action--danger" @click="deleteRole(role)">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </UiCard>
       </div>
 
       <!-- 组管理 Tab -->
       <div v-if="activeTab === 'groups'" class="tab-content">
         <div class="section-header">
           <h2>组管理</h2>
-          <button class="btn btn-primary" @click="openGroupModal()">+ 新建组</button>
+          <UiButton variant="primary" size="md" @click="openGroupModal()">
+            + 新建组
+          </UiButton>
         </div>
 
         <div v-if="groupsLoading" class="loading-text">加载中...</div>
         <div v-else-if="groups.length === 0" class="empty-text">暂无组数据</div>
-        <table v-else class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>名称</th>
-              <th>描述</th>
-              <th>成员数</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="group in groups" :key="group.id">
-              <td>{{ group.id }}</td>
-              <td>{{ group.name }}</td>
-              <td>{{ group.description || '-' }}</td>
-              <td>{{ group.member_count ?? 0 }}</td>
-              <td class="actions-cell">
-                <button class="btn btn-sm btn-outline" @click="openGroupModal(group)">编辑</button>
-                <button class="btn btn-sm btn-danger" @click="deleteGroup(group)">删除</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <UiCard v-else class="table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>描述</th>
+                <th>成员数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="group in groups" :key="group.id">
+                <td>{{ group.id }}</td>
+                <td>{{ group.name }}</td>
+                <td>{{ group.description || '-' }}</td>
+                <td>{{ group.member_count ?? 0 }}</td>
+                <td class="actions-cell">
+                  <button class="btn-action" @click="openGroupModal(group)">编辑</button>
+                  <button class="btn-action btn-action--danger" @click="deleteGroup(group)">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </UiCard>
       </div>
 
       <!-- 用户弹窗 -->
-      <div v-if="showUserModal" class="modal-overlay" @click.self="closeUserModal">
-        <div class="modal">
-          <h3>{{ editingUser ? '编辑用户' : '新建用户' }}</h3>
+      <UiModal
+        v-model="showUserModal"
+        :title="editingUser ? '编辑用户' : '新建用户'"
+        size="md"
+      >
+        <div class="form-stack">
           <div class="form-group">
             <label>用户名 <span class="required">*</span></label>
-            <input v-model="userForm.username" type="text" placeholder="请输入用户名" />
+            <UiInput v-model="userForm.username" placeholder="请输入用户名" />
           </div>
           <div class="form-group">
             <label>密码 <span v-if="!editingUser" class="required">*</span></label>
-            <input v-model="userForm.password" type="password" :placeholder="editingUser ? '留空则不修改' : '请输入密码'" />
+            <UiInput v-model="userForm.password" type="password" :placeholder="editingUser ? '留空则不修改' : '请输入密码'" />
           </div>
           <div v-if="!editingUser" class="form-group">
             <label>确认密码 <span class="required">*</span></label>
-            <input v-model="userForm.password_confirm" type="password" placeholder="请再次输入密码" />
+            <UiInput v-model="userForm.password_confirm" type="password" placeholder="请再次输入密码" />
           </div>
           <div class="form-group">
             <label>邮箱</label>
-            <input v-model="userForm.email" type="email" placeholder="请输入邮箱" />
+            <UiInput v-model="userForm.email" type="email" placeholder="请输入邮箱" />
           </div>
           <div class="form-group">
             <label class="checkbox-label">
@@ -175,27 +187,34 @@ Caduceus 管理面板页面
               </label>
             </div>
           </div>
-          <div v-if="userFormError" class="form-error">{{ userFormError }}</div>
-          <div class="modal-actions">
-            <button class="btn btn-outline" @click="closeUserModal">取消</button>
-            <button class="btn btn-primary" :disabled="userFormSaving" @click="saveUser">
-              {{ userFormSaving ? '保存中...' : '保存' }}
-            </button>
-          </div>
+          <p v-if="userFormError" class="form-error">{{ userFormError }}</p>
         </div>
-      </div>
+        <template #footer>
+          <UiButton variant="secondary" @click="closeUserModal">取消</UiButton>
+          <UiButton
+            variant="primary"
+            :loading="userFormSaving"
+            @click="saveUser"
+          >
+            保存
+          </UiButton>
+        </template>
+      </UiModal>
 
       <!-- 角色弹窗 -->
-      <div v-if="showRoleModal" class="modal-overlay" @click.self="closeRoleModal">
-        <div class="modal">
-          <h3>{{ editingRole ? '编辑角色' : '新建角色' }}</h3>
+      <UiModal
+        v-model="showRoleModal"
+        :title="editingRole ? '编辑角色' : '新建角色'"
+        size="md"
+      >
+        <div class="form-stack">
           <div class="form-group">
             <label>名称 <span class="required">*</span></label>
-            <input v-model="roleForm.name" type="text" placeholder="请输入角色名称" />
+            <UiInput v-model="roleForm.name" placeholder="请输入角色名称" />
           </div>
           <div class="form-group">
             <label>角色类型 <span class="required">*</span></label>
-            <select v-model="roleForm.role_type">
+            <select v-model="roleForm.role_type" class="form-input">
               <option value="initiator">发起人</option>
               <option value="executor">执行人</option>
               <option value="admin">管理员</option>
@@ -203,44 +222,50 @@ Caduceus 管理面板页面
           </div>
           <div class="form-group">
             <label>描述</label>
-            <textarea v-model="roleForm.description" rows="3" placeholder="请输入角色描述"></textarea>
+            <textarea v-model="roleForm.description" rows="3" class="form-input" placeholder="请输入角色描述"></textarea>
           </div>
-          <div v-if="roleFormError" class="form-error">{{ roleFormError }}</div>
-          <div class="modal-actions">
-            <button class="btn btn-outline" @click="closeRoleModal">取消</button>
-            <button class="btn btn-primary" :disabled="roleFormSaving" @click="saveRole">
-              {{ roleFormSaving ? '保存中...' : '保存' }}
-            </button>
-          </div>
+          <p v-if="roleFormError" class="form-error">{{ roleFormError }}</p>
         </div>
-      </div>
+        <template #footer>
+          <UiButton variant="secondary" @click="closeRoleModal">取消</UiButton>
+          <UiButton
+            variant="primary"
+            :loading="roleFormSaving"
+            @click="saveRole"
+          >
+            保存
+          </UiButton>
+        </template>
+      </UiModal>
 
       <!-- 组弹窗 -->
-      <div v-if="showGroupModal" class="modal-overlay" @click.self="closeGroupModal">
-        <div class="modal">
-          <h3>{{ editingGroup ? '编辑组' : '新建组' }}</h3>
+      <UiModal
+        v-model="showGroupModal"
+        :title="editingGroup ? '编辑组' : '新建组'"
+        size="md"
+      >
+        <div class="form-stack">
           <div class="form-group">
             <label>名称 <span class="required">*</span></label>
-            <input v-model="groupForm.name" type="text" placeholder="请输入组名称" />
+            <UiInput v-model="groupForm.name" placeholder="请输入组名称" />
           </div>
           <div class="form-group">
             <label>描述</label>
-            <textarea v-model="groupForm.description" rows="3" placeholder="请输入组描述"></textarea>
+            <textarea v-model="groupForm.description" rows="3" class="form-input" placeholder="请输入组描述"></textarea>
           </div>
-          <div v-if="groupFormError" class="form-error">{{ groupFormError }}</div>
-          <div class="modal-actions">
-            <button class="btn btn-outline" @click="closeGroupModal">取消</button>
-            <button class="btn btn-primary" :disabled="groupFormSaving" @click="saveGroup">
-              {{ groupFormSaving ? '保存中...' : '保存' }}
-            </button>
-          </div>
+          <p v-if="groupFormError" class="form-error">{{ groupFormError }}</p>
         </div>
-      </div>
-
-      <!-- 全局消息提示 -->
-      <div v-if="toastMessage" :class="['toast', 'toast-' + toastType]" @click="toastMessage = ''">
-        {{ toastMessage }}
-      </div>
+        <template #footer>
+          <UiButton variant="secondary" @click="closeGroupModal">取消</UiButton>
+          <UiButton
+            variant="primary"
+            :loading="groupFormSaving"
+            @click="saveGroup"
+          >
+            保存
+          </UiButton>
+        </template>
+      </UiModal>
     </div>
   </AppLayout>
 </template>
@@ -248,18 +273,27 @@ Caduceus 管理面板页面
 <script setup>
 /**
  * Caduceus AdminPanel 页面脚本
- * 管理用户/角色/组的 CRUD 操作，包含表格展示、弹窗表单和状态处理
+ * 业务逻辑零改动：所有 client.get/patch/post/delete 调用、表单校验、角色同步逻辑保留。
+ * 仅 showToast() 替换为 useToast() 调用（行为等价）。
  */
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import client from '@/api/client'
+import { useToast } from '@/stores/toast'
+import { useConfirm } from '@/stores/confirm'
+import {
+  UiButton, UiInput, UiCard, UiBadge, UiModal, UiTabs
+} from '@/components/ui'
+
+const toast = useToast()
+const confirm = useConfirm()
 
 // ---- 状态定义 ----
 
 const activeTab = ref('users')
 const tabs = [
-  { key: 'users', label: '用户管理' },
-  { key: 'roles', label: '角色管理' },
+  { key: 'users',  label: '用户管理' },
+  { key: 'roles',  label: '角色管理' },
   { key: 'groups', label: '组管理' }
 ]
 
@@ -275,10 +309,6 @@ const allRoles = ref([])
 // 组数据
 const groups = ref([])
 const groupsLoading = ref(false)
-
-// Toast 消息
-const toastMessage = ref('')
-const toastType = ref('success')
 
 // ---- 用户弹窗状态 ----
 const showUserModal = ref(false)
@@ -317,13 +347,6 @@ const groupForm = reactive({
 
 // ---- 通用工具函数 ----
 
-/** 显示 toast 消息，2.5 秒后自动消失 */
-function showToast(message, type = 'success') {
-  toastMessage.value = message
-  toastType.value = type
-  setTimeout(() => { toastMessage.value = '' }, 2500)
-}
-
 /** 格式化用户关联的角色列表为逗号分隔字符串 */
 function formatUserRoles(user) {
   if (!user.role_assignments || user.role_assignments.length === 0) return '-'
@@ -338,6 +361,9 @@ function switchTab(tabKey) {
   if (tabKey === 'groups' && groups.value.length === 0) loadGroups()
 }
 
+// 监听 tab 切换
+watch(activeTab, switchTab)
+
 // ---- 用户 CRUD ----
 
 /** 加载用户列表 */
@@ -348,7 +374,7 @@ async function loadUsers() {
     users.value = Array.isArray(res.data) ? res.data : (res.data?.results || [])
   } catch (e) {
     console.error('加载用户列表失败:', e)
-    showToast('加载用户列表失败', 'error')
+    toast.error('加载用户列表失败')
   } finally {
     usersLoading.value = false
   }
@@ -438,7 +464,7 @@ async function saveUser() {
       }).catch(() => {})
       // 同步角色分配
       await syncUserRoles(editingUser.value)
-      showToast('用户更新成功')
+      toast.success('用户更新成功')
     } else {
       // 新建用户：POST 创建
       const createData = {
@@ -455,7 +481,7 @@ async function saveUser() {
       }
       // 创建角色分配
       await createUserRoles(newUserId, userForm.role_ids)
-      showToast('用户创建成功')
+      toast.success('用户创建成功')
     }
     closeUserModal()
     await loadUsers()
@@ -482,9 +508,9 @@ async function toggleUserActive(user) {
   try {
     await client.patch(`/accounts/users/${user.id}/`, { is_active: !user.is_active })
     user.is_active = !user.is_active
-    showToast(user.is_active ? '用户已启用' : '用户已禁用')
+    toast.success(user.is_active ? '用户已启用' : '用户已禁用')
   } catch (e) {
-    showToast('操作失败', 'error')
+    toast.error('操作失败')
   }
 }
 
@@ -535,7 +561,7 @@ async function loadRoles() {
     roles.value = Array.isArray(res.data) ? res.data : (res.data?.results || [])
   } catch (e) {
     console.error('加载角色列表失败:', e)
-    showToast('加载角色列表失败', 'error')
+    toast.error('加载角色列表失败')
   } finally {
     rolesLoading.value = false
   }
@@ -580,10 +606,10 @@ async function saveRole() {
     }
     if (editingRole.value) {
       await client.patch(`/accounts/roles/${editingRole.value.id}/`, data)
-      showToast('角色更新成功')
+      toast.success('角色更新成功')
     } else {
       await client.post('/accounts/roles/', data)
-      showToast('角色创建成功')
+      toast.success('角色创建成功')
     }
     closeRoleModal()
     await loadRoles()
@@ -607,14 +633,20 @@ async function saveRole() {
 
 /** 删除角色 */
 async function deleteRole(role) {
-  if (!confirm(`确定要删除角色「${role.name}」吗？此操作不可撤销。`)) return
+  const ok = await confirm({
+    title: '删除角色',
+    message: `确定要删除角色「${role.name}」吗？此操作不可撤销。`,
+    tone: 'danger',
+    confirmText: '删除'
+  })
+  if (!ok) return
   try {
     await client.delete(`/accounts/roles/${role.id}/`)
-    showToast('角色已删除')
+    toast.success('角色已删除')
     await loadRoles()
     await refreshAllRoles()
   } catch (e) {
-    showToast('删除失败', 'error')
+    toast.error('删除失败')
   }
 }
 
@@ -638,7 +670,7 @@ async function loadGroups() {
     groups.value = Array.isArray(res.data) ? res.data : (res.data?.results || [])
   } catch (e) {
     console.error('加载组列表失败:', e)
-    showToast('加载组列表失败', 'error')
+    toast.error('加载组列表失败')
   } finally {
     groupsLoading.value = false
   }
@@ -680,10 +712,10 @@ async function saveGroup() {
     }
     if (editingGroup.value) {
       await client.patch(`/accounts/groups/${editingGroup.value.id}/`, data)
-      showToast('组更新成功')
+      toast.success('组更新成功')
     } else {
       await client.post('/accounts/groups/', data)
-      showToast('组创建成功')
+      toast.success('组创建成功')
     }
     closeGroupModal()
     await loadGroups()
@@ -705,13 +737,19 @@ async function saveGroup() {
 
 /** 删除组 */
 async function deleteGroup(group) {
-  if (!confirm(`确定要删除组「${group.name}」吗？此操作不可撤销。`)) return
+  const ok = await confirm({
+    title: '删除组',
+    message: `确定要删除组「${group.name}」吗？此操作不可撤销。`,
+    tone: 'danger',
+    confirmText: '删除'
+  })
+  if (!ok) return
   try {
     await client.delete(`/accounts/groups/${group.id}/`)
-    showToast('组已删除')
+    toast.success('组已删除')
     await loadGroups()
   } catch (e) {
-    showToast('删除失败', 'error')
+    toast.error('删除失败')
   }
 }
 
@@ -724,45 +762,17 @@ onMounted(() => {
 
 <style scoped>
 .admin-panel {
-  position: relative;
-  padding: 24px;
-}
-
-.admin-header h1 {
-  font-size: 24px;
-  margin-bottom: 24px;
-  margin-top: 0;
-  color: #1a1a2e;
-}
-
-/* ---- Tab 切换栏 ---- */
-.tabs {
+  padding: var(--space-6);
   display: flex;
-  gap: 0;
-  border-bottom: 2px solid #e0e0e0;
-  margin-bottom: 24px;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.tab-btn {
-  padding: 10px 24px;
-  border: none;
-  background: none;
-  font-size: 15px;
-  color: #666;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: color 0.2s, border-color 0.2s;
-}
-
-.tab-btn:hover {
-  color: #667eea;
-}
-
-.tab-btn.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+.admin-header__title {
+  font-size: var(--text-2xl);
   font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 /* ---- 区域标题 ---- */
@@ -770,208 +780,168 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-3);
 }
 
 .section-header h2 {
-  font-size: 18px;
+  font-size: var(--text-base);
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
-/* ---- 表格样式 ---- */
+/* ---- 表格 ---- */
+.table-card :deep(.ui-card__body) {
+  padding: 0;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--text-sm);
 }
 
 .data-table thead th {
-  background: #f5f5f5;
-  color: #555;
+  background-color: var(--bg-canvas);
+  color: var(--text-secondary);
   font-weight: 600;
   text-align: left;
-  padding: 12px 16px;
-  border-bottom: 2px solid #e0e0e0;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
   white-space: nowrap;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .data-table tbody td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
 }
 
-.data-table tbody tr:nth-child(even) {
-  background: #fafafa;
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .data-table tbody tr:hover {
-  background: #eef0ff;
+  background-color: var(--bg-canvas);
 }
 
 .actions-cell {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-/* ---- Badge ---- */
-.badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.badge-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge-danger {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-/* ---- 按钮 ---- */
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
+.btn-action {
+  padding: 4px 12px;
+  border: 1px solid var(--color-input);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: opacity 0.2s;
+  font-size: var(--text-xs);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
-.btn:hover {
-  opacity: 0.85;
+.btn-action:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.btn-action--danger {
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
 }
 
-.btn-sm {
-  padding: 5px 12px;
-  font-size: 13px;
+.btn-action--danger:hover {
+  background-color: var(--badge-danger-bg);
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
 }
 
-.btn-primary {
-  background: #667eea;
-  color: #fff;
+.btn-action--warning {
+  color: var(--badge-warning-fg);
+  border-color: var(--badge-warning-bg);
 }
 
-.btn-outline {
-  background: #fff;
-  color: #555;
-  border: 1px solid #ccc;
+.btn-action--warning:hover {
+  background-color: var(--badge-warning-bg);
+  color: var(--badge-warning-fg);
+  border-color: var(--badge-warning-fg);
 }
 
-.btn-outline:hover {
-  border-color: #667eea;
-  color: #667eea;
+.btn-action--success {
+  color: var(--badge-success-fg);
+  border-color: var(--badge-success-bg);
 }
 
-.btn-danger {
-  background: #ef4444;
-  color: #fff;
-}
-
-.btn-warning {
-  background: #f59e0b;
-  color: #fff;
-}
-
-.btn-success {
-  background: #10b981;
-  color: #fff;
+.btn-action--success:hover {
+  background-color: var(--badge-success-bg);
+  color: var(--badge-success-fg);
+  border-color: var(--badge-success-fg);
 }
 
 /* ---- 状态文本 ---- */
-.loading-text {
-  text-align: center;
-  color: #999;
-  padding: 48px 0;
-}
-
+.loading-text,
 .empty-text {
   text-align: center;
-  color: #999;
-  padding: 48px 0;
-}
-
-/* ---- 弹窗遮罩 ---- */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-}
-
-.modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 28px 32px;
-  width: 100%;
-  max-width: 480px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-}
-
-.modal h3 {
-  margin: 0 0 20px;
-  font-size: 18px;
-  color: #1a1a2e;
+  color: var(--text-muted);
+  padding: var(--space-12) 0;
+  font-size: var(--text-sm);
 }
 
 /* ---- 表单 ---- */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .form-group {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 .required {
-  color: #ef4444;
+  color: var(--color-destructive);
 }
 
-.form-group input[type='text'],
-.form-group input[type='email'],
-.form-group input[type='password'],
-.form-group select,
-.form-group textarea {
+.form-input {
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  font-family: inherit;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #667eea;
+.form-input:focus {
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
+}
+
+textarea.form-input {
+  resize: vertical;
 }
 
 .checkbox-label {
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-weight: 400 !important;
   cursor: pointer;
 }
@@ -980,65 +950,24 @@ onMounted(() => {
   width: 16px;
   height: 16px;
   cursor: pointer;
+  accent-color: var(--text-primary);
 }
 
 .checkbox-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 20px;
-  padding: 8px 0;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-2) 0;
 }
 
 .form-error {
-  color: #ef4444;
-  font-size: 13px;
-  margin-bottom: 12px;
+  color: var(--color-destructive);
+  font-size: var(--text-xs);
   white-space: pre-line;
-  padding: 8px 12px;
-  background: #fef2f2;
-  border-radius: 6px;
-}
-
-/* ---- 弹窗按钮 ---- */
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-/* ---- Toast ---- */
-.toast {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 28px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #fff;
-  cursor: pointer;
-  z-index: 300;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  animation: toastFadeIn 0.3s ease;
-}
-
-.toast-success {
-  background: #10b981;
-}
-
-.toast-error {
-  background: #ef4444;
-}
-
-@keyframes toastFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--badge-danger-bg);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-destructive);
+  margin: 0;
 }
 </style>

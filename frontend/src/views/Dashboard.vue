@@ -1,60 +1,58 @@
 <!--
 Caduceus 仪表盘页面
-展示统计卡片、任务概览和最近任务列表
+统计卡片 / 最近任务列表改用 UiCard + UiBadge。
+业务逻辑（数据加载 / 跳转）保持不变。
 -->
 <template>
   <AppLayout>
     <div class="dashboard">
-      <h1>仪表盘</h1>
+      <header class="dashboard__header">
+        <h1 class="dashboard__title">仪表盘</h1>
+        <p class="dashboard__subtitle">本月任务概览与最近动态</p>
+      </header>
 
       <!-- 统计卡片网格 -->
-      <div class="stats-grid">
-        <div class="stat-card" style="--card-color: #667eea">
-          <h3>本月任务总数</h3>
-          <p class="stat-value" v-if="!loading">{{ stats.total_tasks }}</p>
-          <p class="stat-value placeholder" v-else>加载中...</p>
-        </div>
-        <div class="stat-card" style="--card-color: #10b981">
-          <h3>已完成</h3>
-          <p class="stat-value" v-if="!loading">{{ stats.completed_tasks }}</p>
-          <p class="stat-value placeholder" v-else>加载中...</p>
-        </div>
-        <div class="stat-card" style="--card-color: #f59e0b">
-          <h3>完成率</h3>
-          <p class="stat-value" v-if="!loading">{{ stats.completion_rate }}%</p>
-          <p class="stat-value placeholder" v-else>加载中...</p>
-        </div>
-        <div class="stat-card" style="--card-color: #3b82f6">
-          <h3>进行中</h3>
-          <p class="stat-value" v-if="!loading">{{ stats.in_progress_tasks }}</p>
-          <p class="stat-value placeholder" v-else>加载中...</p>
-        </div>
+      <div class="dashboard__stats">
+        <UiCard v-for="card in statCards" :key="card.key" class="stat-card">
+          <div class="stat-card__head">
+            <span class="stat-card__label">{{ card.label }}</span>
+            <span class="stat-card__dot" :style="{ background: card.color }" aria-hidden="true" />
+          </div>
+          <p v-if="!loading" class="stat-card__value">{{ card.value }}</p>
+          <p v-else class="stat-card__value stat-card__value--placeholder">加载中…</p>
+        </UiCard>
       </div>
 
       <!-- 最近任务区域 -->
-      <div class="recent-section">
-        <h2>最近任务</h2>
-        <div v-if="loading" class="loading-text">加载中...</div>
-        <div v-else-if="stats.recent_tasks.length === 0" class="empty-text">
-          暂无任务
-        </div>
-        <div v-else class="recent-list">
-          <div
-            v-for="task in stats.recent_tasks"
-            :key="task.id"
-            class="recent-task-card"
-            @click="goToTask(task.id)"
-          >
-            <div class="task-info">
-              <span class="task-title">{{ task.title }}</span>
-              <span class="task-meta">{{ task.creator_name }} · {{ formatTime(task.created_at) }}</span>
+      <section class="dashboard__section">
+        <h2 class="dashboard__section-title">最近任务</h2>
+        <UiCard class="dashboard__list-card">
+          <UiEmptyState
+            v-if="!loading && stats.recent_tasks.length === 0"
+            title="暂无任务"
+            description="还没有创建任何任务，去新建一个吧。"
+          />
+          <div v-else-if="!loading" class="recent-list">
+            <div
+              v-for="task in stats.recent_tasks"
+              :key="task.id"
+              class="recent-task"
+              @click="goToTask(task.id)"
+            >
+              <div class="recent-task__info">
+                <span class="recent-task__title">{{ task.title }}</span>
+                <span class="recent-task__meta">
+                  {{ task.creator_name }} · {{ formatTime(task.created_at) }}
+                </span>
+              </div>
+              <UiBadge :tone="statusToTone(task.status)">
+                {{ task.status_display }}
+              </UiBadge>
             </div>
-            <span class="task-status-tag" :class="'status-' + task.status">
-              {{ task.status_display }}
-            </span>
           </div>
-        </div>
-      </div>
+          <div v-else class="recent-list__loading">加载中…</div>
+        </UiCard>
+      </section>
     </div>
   </AppLayout>
 </template>
@@ -62,12 +60,13 @@ Caduceus 仪表盘页面
 <script setup>
 /**
  * Caduceus Dashboard 页面脚本
- * 加载仪表盘聚合统计数据并展示
+ * 业务逻辑零改动：数据加载、跳转、状态映射保持原状。
  */
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { getDashboardStats } from '@/api/dashboard'
+import { UiCard, UiBadge, UiEmptyState } from '@/components/ui'
 
 const router = useRouter()
 
@@ -82,11 +81,36 @@ const stats = reactive({
   recent_tasks: []
 })
 
+// 统计卡片数据（视图层配置，业务字段不变）
+const statCards = ref([])
+
+function refreshStatCards() {
+  statCards.value = [
+    { key: 'total',    label: '本月任务总数', value: stats.total_tasks,         color: 'var(--color-chart-3)' },
+    { key: 'done',     label: '已完成',       value: stats.completed_tasks,     color: 'var(--color-success)' },
+    { key: 'rate',     label: '完成率',       value: stats.completion_rate + '%', color: 'var(--color-chart-2)' },
+    { key: 'progress', label: '进行中',       value: stats.in_progress_tasks,   color: 'var(--color-chart-4)' }
+  ]
+}
+
+// 状态 → Badge tone 映射（与原 status-* CSS 类保持一致语义）
+function statusToTone(status) {
+  switch (status) {
+    case 'draft':        return 'neutral'
+    case 'pending':      return 'warning'
+    case 'in_progress':  return 'info'
+    case 'completed':    return 'success'
+    case 'cancelled':    return 'danger'
+    default:             return 'neutral'
+  }
+}
+
 // 页面挂载时加载统计数据
 onMounted(async () => {
   try {
     const res = await getDashboardStats()
     Object.assign(stats, res.data)
+    refreshStatCards()
   } catch (e) {
     console.error('加载仪表盘数据失败:', e)
   } finally {
@@ -113,131 +137,128 @@ function goToTask(id) {
 
 <style scoped>
 .dashboard {
-  padding: 24px;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
-h1 {
-  margin-bottom: 24px;
+.dashboard__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.stats-grid {
+.dashboard__title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+}
+
+.dashboard__subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* 统计区 */
+.dashboard__stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 
-.stat-card {
-  background: white;
-  padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.stat-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
 }
 
-.stat-card h3 {
-  margin-bottom: 8px;
-  color: #666;
+.stat-card__label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
-.stat-value {
-  font-size: 32px;
-  font-weight: bold;
-  color: var(--card-color, #667eea);
+.stat-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
 }
 
-.stat-value.placeholder {
-  font-size: 20px;
-  color: #999;
-  font-weight: normal;
+.stat-card__value {
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
 }
 
-/* 最近任务区域 */
-.recent-section {
-  margin-top: 32px;
+.stat-card__value--placeholder {
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
-.recent-section h2 {
-  margin-bottom: 16px;
-  font-size: 20px;
-  color: #333;
+/* 最近任务区 */
+.dashboard__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.loading-text,
-.empty-text {
-  color: #999;
-  font-size: 14px;
-  padding: 16px 0;
+.dashboard__section-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dashboard__list-card :deep(.ui-card__body) {
+  padding: 0;
 }
 
 .recent-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-.recent-task-card {
+.recent-task {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: white;
-  padding: 16px 20px;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: background-color var(--transition-fast);
 }
 
-.recent-task-card:hover {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+.recent-task + .recent-task {
+  border-top: 1px solid var(--border-subtle);
 }
 
-.task-info {
+.recent-task:hover {
+  background-color: var(--color-muted);
+}
+
+.recent-task__info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
-.task-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
-}
-
-.task-meta {
-  font-size: 12px;
-  color: #999;
-}
-
-.task-status-tag {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+.recent-task__title {
+  font-size: var(--text-sm);
   font-weight: 500;
-  white-space: nowrap;
+  color: var(--text-primary);
 }
 
-.status-draft {
-  background: #f3f4f6;
-  color: #6b7280;
+.recent-task__meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
-.status-pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.status-in_progress {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.status-completed {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-cancelled {
-  background: #fee2e2;
-  color: #991b1b;
+.recent-list__loading {
+  padding: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-align: center;
 }
 </style>

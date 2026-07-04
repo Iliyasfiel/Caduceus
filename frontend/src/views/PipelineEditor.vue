@@ -9,9 +9,9 @@ Caduceus 管线编辑器页面
       <!-- 顶部工具栏：管线名称输入、保存按钮、返回按钮 -->
       <div class="toolbar">
         <div class="toolbar-left">
-          <button class="btn-back" @click="goBack">
+          <UiButton variant="secondary" size="sm" @click="goBack">
             ← 返回列表
-          </button>
+          </UiButton>
           <input
             ref="nameInputRef"
             v-model="pipelineName"
@@ -22,14 +22,15 @@ Caduceus 管线编辑器页面
         </div>
         <div class="toolbar-right">
           <span v-if="currentPipelineId" class="pipeline-id">ID: {{ currentPipelineId }}</span>
-          <button
-            class="btn-save"
-            :disabled="saving || !pipelineName.trim()"
+          <UiButton
+            variant="primary"
+            size="md"
+            :loading="saving"
+            :disabled="!pipelineName.trim()"
             @click="savePipeline"
           >
-            <span v-if="saving" class="btn-spinner"></span>
             {{ saving ? '保存中...' : '保存' }}
-          </button>
+          </UiButton>
         </div>
       </div>
 
@@ -43,9 +44,14 @@ Caduceus 管线编辑器页面
             </button>
           </div>
           <div v-if="!listCollapsed" class="list-body">
-            <button class="btn-new" @click="createNewPipeline">
+            <UiButton
+              variant="primary"
+              size="sm"
+              class="list-new-btn"
+              @click="createNewPipeline"
+            >
               + 新建管线
-            </button>
+            </UiButton>
             <div v-if="loadingList" class="list-loading">加载中...</div>
             <div v-else-if="pipelines.length === 0" class="list-empty">暂无管线</div>
             <div
@@ -70,13 +76,6 @@ Caduceus 管线编辑器页面
           />
         </div>
       </div>
-
-      <!-- 操作提示 Toast 消息 -->
-      <Transition name="fade">
-        <div v-if="showToast" class="toast" :class="toastType">
-          {{ toastMessage }}
-        </div>
-      </Transition>
     </div>
   </AppLayout>
 </template>
@@ -88,8 +87,11 @@ import AppLayout from '@/components/AppLayout.vue'
 import PipelineCanvas from '@/components/PipelineCanvas.vue'
 import { getPipelines, getPipeline, createPipeline, updatePipeline } from '@/api/pipeline'
 import { getResourceTypes } from '@/api/resources'
+import { useToast } from '@/stores/toast'
+import { UiButton } from '@/components/ui'
 
 const router = useRouter()
+const toast = useToast()
 
 // ===================== 状态 =====================
 
@@ -201,7 +203,7 @@ async function loadPipelineById(id) {
 // 保存管线：新建时 POST 创建，编辑已有管线时 PATCH 更新
 async function savePipeline() {
   if (!pipelineName.value.trim()) {
-    showToastMessage('请输入管线名称', 'error')
+    toast.error('请输入管线名称')
     return
   }
 
@@ -217,13 +219,13 @@ async function savePipeline() {
     if (currentPipelineId.value) {
       // 编辑已有管线：PATCH 更新
       const res = await updatePipeline(currentPipelineId.value, payload)
-      showToastMessage('管线更新成功')
+      toast.success('管线更新成功')
     } else {
       // 新建管线：POST 创建
       const res = await createPipeline(payload)
       // 保存成功后记录新管线 ID
       currentPipelineId.value = res.data.id
-      showToastMessage('管线创建成功')
+      toast.success('管线创建成功')
     }
 
     // 刷新管线列表
@@ -231,7 +233,7 @@ async function savePipeline() {
   } catch (err) {
     console.error('保存管线失败:', err)
     const detail = err.response?.data?.detail || err.message || '保存失败'
-    showToastMessage(detail, 'error')
+    toast.error(detail)
   } finally {
     saving.value = false
   }
@@ -290,9 +292,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
   min-height: 48px;
 }
@@ -300,99 +302,42 @@ onMounted(async () => {
 .toolbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex: 1;
 }
 
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.btn-back {
-  padding: 6px 14px;
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #374151;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-
-.btn-back:hover {
-  background: #e5e7eb;
+  gap: var(--space-3);
 }
 
 .name-input {
   flex: 1;
   max-width: 400px;
-  padding: 6px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 15px;
-  color: #1f2937;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  font-size: var(--text-base);
+  color: var(--text-primary);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .name-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
 }
 
 .name-input::placeholder {
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .pipeline-id {
-  font-size: 12px;
-  color: #9ca3af;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   font-family: monospace;
-}
-
-/* 保存按钮 */
-.btn-save {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 20px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.15s;
-}
-
-.btn-save:hover:not(:disabled) {
-  background: #5a6fd6;
-}
-
-.btn-save:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ==================== 编辑器主体 ==================== */
@@ -408,11 +353,11 @@ onMounted(async () => {
 .pipeline-list-panel {
   width: 240px;
   min-width: 240px;
-  background: #fafbfc;
-  border-right: 1px solid #e5e7eb;
+  background-color: var(--bg-canvas);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  transition: width 0.25s, min-width 0.25s;
+  transition: width var(--transition-normal), min-width var(--transition-normal);
 }
 
 .pipeline-list-panel.collapsed {
@@ -424,16 +369,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
 .list-header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -445,16 +390,18 @@ onMounted(async () => {
 .btn-collapse {
   background: none;
   border: none;
-  font-size: 12px;
-  color: #6b7280;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--space-1);
   flex-shrink: 0;
-  transition: color 0.15s;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .btn-collapse:hover {
-  color: #374151;
+  color: var(--text-primary);
+  background-color: var(--color-muted);
 }
 
 .list-body {
@@ -462,70 +409,58 @@ onMounted(async () => {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 8px;
+  padding: var(--space-2);
+  gap: var(--space-1);
 }
 
 /* 新建管线按钮 */
-.btn-new {
-  padding: 8px 14px;
-  background: #667eea;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
+.list-new-btn {
   width: 100%;
-  margin-bottom: 8px;
-  transition: background 0.15s;
-}
-
-.btn-new:hover {
-  background: #5a6fd6;
+  margin-bottom: var(--space-1);
 }
 
 /* 列表加载 / 空状态 */
 .list-loading,
 .list-empty {
   text-align: center;
-  padding: 24px 12px;
-  font-size: 13px;
-  color: #9ca3af;
+  padding: var(--space-6) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 /* 列表项 */
 .list-item {
   display: flex;
   flex-direction: column;
-  padding: 10px 12px;
-  margin-bottom: 4px;
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  transition: background-color var(--transition-fast);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
 }
 
 .list-item:hover {
-  background: #f3f4f6;
+  background-color: var(--color-muted);
 }
 
 .list-item.active {
-  background: #ede9fe;
-  border-color: #a78bfa;
+  background-color: var(--color-muted);
+  border-color: var(--text-primary);
 }
 
 .list-item-name {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .list-item-time {
-  font-size: 11px;
-  color: #9ca3af;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -540,40 +475,5 @@ onMounted(async () => {
 /* 覆盖 PipelineCanvas 内部的 100vh 高度，使其适配父容器 */
 .canvas-wrapper :deep(.pipeline-canvas) {
   height: 100%;
-}
-
-/* ==================== Toast 消息 ==================== */
-
-.toast {
-  position: fixed;
-  top: 76px;
-  right: 24px;
-  z-index: 200;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  pointer-events: none;
-}
-
-.toast.success {
-  background: #10b981;
-}
-
-.toast.error {
-  background: #ef4444;
-}
-
-/* Toast 淡入淡出过渡动画 */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
 }
 </style>
