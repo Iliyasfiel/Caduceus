@@ -1,21 +1,24 @@
 <!--
 Caduceus 应用布局组件
-提供响应式侧边栏导航和顶部栏
+提供响应式侧边栏导航和顶部栏（Vercel 风格 token 化）
 移动端侧边栏可折叠为汉堡菜单
 -->
 <template>
   <div class="app-layout">
     <!-- 顶部栏 -->
     <header class="header">
-      <button class="menu-toggle" @click="toggleSidebar">
+      <button class="menu-toggle" @click="toggleSidebar" aria-label="切换菜单">
         <span class="menu-icon">☰</span>
       </button>
       <div class="logo">Caduceus</div>
       <div class="header-right">
+        <UiThemeToggle />
         <NotificationBell />
         <div class="user-menu">
-          <span>{{ user?.username || '用户' }}</span>
-          <button @click="handleLogout">退出</button>
+          <span class="user-name">{{ user?.username || '用户' }}</span>
+          <UiButton variant="secondary" size="sm" @click="handleLogout">
+            退出
+          </UiButton>
         </div>
       </div>
     </header>
@@ -39,9 +42,13 @@ Caduceus 应用布局组件
 </template>
 
 <script setup>
+/**
+ * AppLayout 脚本：业务逻辑零改动（auth store / 登出 / 响应式折叠全部保留）。
+ */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import NotificationBell from '@/components/NotificationBell.vue'
+import { UiButton, UiThemeToggle } from '@/components/ui'
 
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)
@@ -81,6 +88,7 @@ function handleLogout() {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: var(--bg-canvas);
 }
 
 /* 顶部栏 */
@@ -89,9 +97,10 @@ function handleLogout() {
   align-items: center;
   justify-content: space-between;
   height: 60px;
-  background: #667eea;
-  color: white;
-  padding: 0 16px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 var(--space-4);
   position: fixed;
   top: 0;
   left: 0;
@@ -102,36 +111,42 @@ function handleLogout() {
 .menu-toggle {
   background: none;
   border: none;
-  color: white;
-  font-size: 24px;
+  color: var(--text-secondary);
+  font-size: var(--text-lg);
   cursor: pointer;
-  padding: 8px;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.menu-toggle:hover {
+  color: var(--text-primary);
+  background-color: var(--color-muted);
 }
 
 .logo {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-3);
 }
 
 .user-menu {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
-.user-menu button {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
+.user-name {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 /* 侧边栏 */
@@ -141,8 +156,9 @@ function handleLogout() {
   left: 0;
   bottom: 0;
   width: 240px;
-  background: #f5f5f5;
-  transition: transform 0.3s;
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  transition: transform var(--transition-normal);
   z-index: 90;
 }
 
@@ -151,33 +167,44 @@ function handleLogout() {
 }
 
 .nav-menu {
-  padding: 16px 0;
+  padding: var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .nav-item {
   display: block;
-  padding: 12px 24px;
-  color: #333;
+  padding: var(--space-3) var(--space-5);
+  color: var(--text-secondary);
   text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border-radius: 0;
+  margin: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
 .nav-item:hover {
-  background: #e0e0e0;
+  background-color: var(--color-muted);
+  color: var(--text-primary);
 }
 
 .nav-item.router-link-active {
-  background: #667eea;
-  color: white;
+  background-color: var(--color-muted);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* 主内容区 */
 .main-content {
   margin-top: 60px;
   margin-left: 240px;
-  padding: 24px;
+  padding: var(--space-5);
   flex: 1;
-  background: #fff;
-  transition: margin-left 0.3s;
+  background-color: var(--bg-canvas);
+  transition: margin-left var(--transition-normal);
 }
 
 .main-content.sidebar-collapsed {
@@ -196,6 +223,10 @@ function handleLogout() {
 
   .sidebar:not(.sidebar-collapsed) {
     transform: translateX(0);
+  }
+
+  .user-name {
+    display: none;
   }
 }
 </style>

@@ -46,9 +46,9 @@ Caduceus 资源选择器组件（模态版）
           />
           <span class="item-name">{{ item.name }}</span>
           <span class="item-type">{{ item.resource_type_name }}</span>
-          <span class="status-badge" :class="'status-' + item.status">
+          <UiBadge :tone="statusTone(item.status)">
             {{ statusLabel(item.status) }}
-          </span>
+          </UiBadge>
         </div>
       </div>
 
@@ -202,179 +202,164 @@ watch(
 }
 
 .modal-card {
-  background: #fff;
-  border-radius: 10px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   width: 560px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-title {
   margin: 0;
-  padding: 20px 24px 16px;
-  font-size: 18px;
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  font-size: var(--text-lg);
   font-weight: 600;
-  color: #333;
-  border-bottom: 1px solid #eee;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .filter-area {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 24px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .filter-label {
-  font-size: 14px;
-  color: #555;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .type-select {
   flex: 1;
-  padding: 7px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #333;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
   outline: none;
-  background: #fff;
+  background-color: var(--bg-surface);
   cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .type-select:focus {
-  border-color: #667eea;
+  border-color: var(--color-ring);
+  box-shadow: 0 0 0 3px rgba(13, 13, 13, 0.08);
 }
 
 .items-area {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   min-height: 120px;
   max-height: 360px;
 }
 
 .empty-hint {
   text-align: center;
-  color: #999;
-  padding: 32px 24px;
-  font-size: 14px;
+  color: var(--text-muted);
+  padding: var(--space-8) var(--space-6);
+  font-size: var(--text-sm);
 }
 
 .item-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 24px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color var(--transition-fast);
 }
 
 .item-row:hover {
-  background: #f5f7fa;
+  background-color: var(--color-muted);
 }
 
 .item-row.item-linked {
-  background: #f9f9f9;
+  background-color: var(--bg-canvas);
 }
 
 .item-row.item-linked:hover {
-  background: #f0f0f0;
+  background-color: var(--color-muted);
 }
 
 .item-checkbox {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--text-primary);
   flex-shrink: 0;
 }
 
 .item-name {
   flex: 1;
-  font-size: 14px;
-  color: #333;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .item-type {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   white-space: nowrap;
-}
-
-/* 状态彩色 badge */
-.status-badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #fff;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.status-available {
-  background: #27ae60;
-}
-
-.status-reserved {
-  background: #e67e22;
-}
-
-.status-in_use {
-  background: #3498db;
-}
-
-.status-maintenance {
-  background: #95a5a6;
-}
-
-.status-unavailable {
-  background: #e74c3c;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  padding: 14px 24px;
-  border-top: 1px solid #eee;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .btn-cancel {
-  padding: 8px 20px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  color: #666;
-  font-size: 14px;
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--color-input);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .btn-cancel:hover {
-  background: #f5f5f5;
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background-color: var(--color-muted);
 }
 
 .btn-confirm {
-  padding: 8px 20px;
+  padding: var(--space-2) var(--space-5);
   border: none;
-  border-radius: 6px;
-  background: #667eea;
-  color: #fff;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--text-primary);
+  color: var(--bg-surface);
+  font-size: var(--text-sm);
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: opacity var(--transition-fast);
 }
 
 .btn-confirm:hover {
-  background: #5a6fd6;
+  opacity: 0.85;
+}
+
+/* 移动端全屏化（路径 A 的 5 行 CSS） */
+@media (max-width: 640px) {
+  .modal-card {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
 }
 </style>

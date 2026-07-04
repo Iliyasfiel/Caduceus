@@ -118,12 +118,12 @@ onUnmounted(() => {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #e74c3c;
-  color: white;
-  font-size: 11px;
+  background: var(--color-destructive);
+  color: var(--color-primary-foreground);
+  font-size: var(--text-xs);
   min-width: 18px;
   height: 18px;
-  border-radius: 9px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,76 +136,81 @@ onUnmounted(() => {
   top: 100%;
   right: 0;
   width: 320px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   z-index: 110;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .dropdown-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
 }
 
 .mark-all-btn {
   background: none;
   border: none;
-  color: #667eea;
+  color: var(--text-primary);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--text-xs);
+  transition: color var(--transition-fast);
 }
 
 .mark-all-btn:hover {
-  color: #5a6fd6;
+  color: var(--text-secondary);
 }
 
 .notification-list {
   max-height: 360px;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 .empty-tip {
   text-align: center;
-  color: #999;
-  padding: 24px;
+  color: var(--text-muted);
+  padding: var(--space-6);
   margin: 0;
+  font-size: var(--text-sm);
 }
 
 .notification-item {
-  padding: 12px;
-  border-radius: 6px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background-color var(--transition-fast);
 }
 
 .notification-item:hover {
-  background: #f5f7fa;
+  background: var(--color-muted);
 }
 
 .notification-item.unread {
-  background: #f0f4ff;
+  background: var(--badge-info-bg);
 }
 
 .notification-item.unread:hover {
-  background: #e6edff;
+  background: var(--badge-info-bg);
+  filter: brightness(0.95);
 }
 
 .notification-title {
   font-weight: 500;
-  color: #333;
-  font-size: 14px;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
 }
 
 .notification-time {
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
 }
 </style>

@@ -43,6 +43,7 @@ Caduceus 任务合并组组件
  */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { UiBadge } from '@/components/ui'
 
 const props = defineProps({
   groupTitle: { type: String, required: true },
