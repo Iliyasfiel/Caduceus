@@ -94,6 +94,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'status', 'status_display',
             'creator', 'creator_name', 'pipeline', 'pipeline_name',
             'pipeline_nodes', 'pipeline_edges',
+            'current_node',
             'fields', 'resources', 'resources_count',
             'related_tasks', 'related_tasks_count',
             'share_token', 'share_fields', 'share_expires_at',
@@ -156,7 +157,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             'title', 'description', 'status', 'pipeline',
-            'fields', 'assignee_ids', 'role_ids'
+            'fields', 'current_node', 'assignee_ids', 'role_ids'
         ]
 
     def validate(self, data):
@@ -189,6 +190,12 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         fields = validated_data.get('fields', [])
         if pipeline and not fields:
             validated_data['fields'] = self._build_fields_from_pipeline(pipeline)
+
+        # 如果绑定了管线且未指定 current_node，自动设为管线第一个节点 id
+        if validated_data.get('pipeline') and not validated_data.get('current_node'):
+            pipeline = validated_data['pipeline']
+            if pipeline.nodes and len(pipeline.nodes) > 0:
+                validated_data['current_node'] = pipeline.nodes[0].get('id', '')
 
         # 创建任务
         task = Task.objects.create(**validated_data)
@@ -245,6 +252,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             'title', 'description', 'status', 'pipeline',
+            'current_node',
             'fields', 'resources', 'related_tasks',
             'share_fields', 'share_expires_at'
         ]

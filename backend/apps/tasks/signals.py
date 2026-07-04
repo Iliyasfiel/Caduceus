@@ -207,11 +207,86 @@ def log_task_resource_change(sender, instance, action, pk_set, **kwargs):
         pass
 
 
-# 注意：
-# 上述信号处理器仅作为示例框架，实际日志记录需要在视图层手动调用
-# create_task_log() 函数以确保准确记录操作者信息
-#
-# 推荐做法：
-# 1. 在视图的 perform_create, perform_update 等方法中调用 create_task_log
-# 2. 或使用 django-threadlocals middleware 自动获取当前用户
-# 3. 或自定义 middleware 将 request.user 存储在全局可访问的位置
+@receiver(post_save, sender=TaskLog)
+def on_task_stage_completed(sender, instance, created, **kwargs):
+    """
+    TaskLog 保存后信号处理
+    检测 current_node 变更 → 查找下一阶段角色 → 创建通知
+    """
+    if not created:
+        return
+
+    changes = instance.changes or {}
+    if 'current_node' not in changes:
+        return
+
+    new_node = changes.get('current_node')
+    old_node = changes.get('old_current_node', '')
+
+    if new_node == 'completed' or not new_node:
+        return
+
+    task = instance.task
+    pipeline = task.pipeline
+    if not pipeline:
+        return
+
+    nodes = pipeline.nodes or []
+    current_node_config = None
+    for node in nodes:
+        if node.get('id') == new_node:
+            current_node_config = node
+            break
+
+    if not current_node_config:
+        return
+
+    node_roles = current_node_config.get('roles', [])
+    if not node_roles:
+        return
+
+    current_idx = None
+    current_label = current_node_config.get('label', new_node)
+    for i, node in enumerate(nodes):
+        if node.get('id') == new_node:
+            current_idx = i
+            break
+
+    next_label = ''
+    if current_idx is not None and current_idx < len(nodes) - 1:
+        next_label = nodes[current_idx + 1].get('label', '')
+
+    from apps.accounts.models import RoleAssignment
+    role_ids = [r.get('role_id') for r in node_roles if r.get('role_id')]
+    if not role_ids:
+        return
+
+    user_ids = RoleAssignment.objects.filter(
+        role_id__in=role_ids
+    ).values_list('user_id', flat=True).distinct()
+
+    if not user_ids:
+        return
+
+    from apps.notifications.models import Notification
+
+    title = f'阶段「{current_label}」进行中'
+    content = ''
+    if next_label:
+        content = f'可以开始处理「{next_label}」阶段的任务了'
+    else:
+        content = f'当前阶段：{current_label}'
+
+    notifications = [
+        Notification(
+            recipient_id=user_id,
+            type='stage_completed',
+            title=title,
+            content=content,
+            link=f'/tasks/{task.id}'
+        )
+        for user_id in user_ids
+    ]
+
+    if notifications:
+        Notification.objects.bulk_create(notifications)

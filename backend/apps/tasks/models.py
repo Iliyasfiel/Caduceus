@@ -47,6 +47,10 @@ class Task(models.Model):
         verbose_name='关联管线'
     )
 
+    # 当前所在阶段节点 ID（对应管线 nodes 数组中的节点 id）
+    # 创建绑定管线的任务时自动设为第一个节点 id
+    current_node = models.CharField(max_length=50, blank=True, default='', verbose_name='当前阶段节点')
+
     # 自定义字段（JSONB 数组，全局共享）
     # 字段值全局唯一，每个字段含 key/label/type/value/priority_roles/is_public
     # 示例：[{"key":"visit_unit","label":"来访单位","type":"text","value":"XXX公司","priority_roles":[],"is_public":true}]

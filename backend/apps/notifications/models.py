@@ -28,6 +28,7 @@ class Notification(models.Model):
             ('task_updated', '任务更新'),
             ('comment_added', '新增评论'),
             ('stage_changed', '阶段变更'),
+            ('stage_completed', '阶段完成'),
         ],
         verbose_name='通知类型'
     )

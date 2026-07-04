@@ -37,11 +37,24 @@ Caduceus 任务详情页面
                 v-for="(node, idx) in pipelineNodes"
                 :key="node.id"
                 class="timeline-step"
-                :class="{ active: currentStageIndex >= idx, last: idx === pipelineNodes.length - 1 }"
+                :class="{ last: idx === pipelineNodes.length - 1 }"
               >
-                <div class="step-dot" :class="{ active: currentStageIndex >= idx }"></div>
-                <div class="step-label">{{ node.label }}</div>
-                <div v-if="idx < pipelineNodes.length - 1" class="step-line" :class="{ active: currentStageIndex > idx }"></div>
+                <div
+                  class="step-dot"
+                  :class="{
+                    completed: currentStageIndex > idx,
+                    current: currentStageIndex === idx
+                  }"
+                ></div>
+                <div class="step-label" :class="{ current: currentStageIndex === idx }">{{ node.label }}</div>
+                <div v-if="currentStageIndex > idx" class="step-label-done">已完成</div>
+                <div v-if="idx < pipelineNodes.length - 1" class="step-line" :class="{ completed: currentStageIndex > idx, active: currentStageIndex === idx }"></div>
+                <div v-if="currentStageIndex === idx && idx < pipelineNodes.length - 1" class="step-next-btn" @click="handleMarkStageComplete(idx)">
+                  <span class="next-arrow">▶</span>
+                </div>
+                <div v-if="currentStageIndex === idx && idx === pipelineNodes.length - 1" class="step-complete-btn" @click="handleCompleteTask">
+                  <span>✓ 完成任务</span>
+                </div>
               </div>
             </div>
           </section>
@@ -160,9 +173,9 @@ Caduceus 任务详情页面
 
           <section class="side-section" v-if="pipelineNodes.length > 0">
             <h3>阶段节点</h3>
-            <div v-for="(node, idx) in pipelineNodes" :key="node.id" class="node-summary" :class="{ active: currentStageIndex >= idx }">
+            <div v-for="(node, idx) in pipelineNodes" :key="node.id" class="node-summary" :class="{ completed: currentStageIndex > idx, current: currentStageIndex === idx }">
               <div class="node-summary-header">
-                <span class="node-dot" :class="{ active: currentStageIndex >= idx }"></span>
+                <span class="node-dot" :class="{ completed: currentStageIndex > idx, current: currentStageIndex === idx }"></span>
                 <strong>{{ node.label }}</strong>
               </div>
               <div class="node-summary-roles" v-if="node.roles && node.roles.length > 0">
@@ -254,11 +267,17 @@ const logs = ref([])
 const newComment = ref('')
 const commenting = ref(false)
 const pipelineNodes = ref([])
-const currentStageIndex = ref(0)
 const showResourceSelector = ref(false)
 const linkedResources = ref([])
 const showShareModal = ref(false)
 const shareExpiresAt = ref('')
+
+const currentStageIndex = computed(() => {
+  if (!task.value?.current_node || !pipelineNodes.value.length) return 0
+  if (task.value.current_node === 'completed') return pipelineNodes.value.length
+  const idx = pipelineNodes.value.findIndex(n => n.id === task.value.current_node)
+  return idx >= 0 ? idx : 0
+})
 
 const shareUrl = computed(() => {
   return task.value?.share_token ? `http://localhost:3000/share/${task.value.share_token}` : ''
@@ -299,14 +318,6 @@ async function loadTask() {
 
     // 管线信息
     pipelineNodes.value = task.value.pipeline_nodes || []
-    if (pipelineNodes.value.length > 0) {
-      // 默认当前阶段为第一个节点
-      const instanceNode = task.value.current_node
-      if (instanceNode) {
-        const idx = pipelineNodes.value.findIndex(n => n.id === instanceNode)
-        currentStageIndex.value = idx >= 0 ? idx : 0
-      }
-    }
 
     comments.value = task.value.recent_comments || []
     // 加载已关联资源
@@ -449,6 +460,29 @@ async function handleStatusChange() {
   await handleSave()
 }
 
+async function handleMarkStageComplete(idx) {
+  if (idx >= pipelineNodes.value.length - 1) return
+  const nextNode = pipelineNodes.value[idx + 1]
+  try {
+    await tasksStore.updateExistingTask(task.value.id, { current_node: nextNode.id })
+    task.value.current_node = nextNode.id
+  } catch (err) {
+    console.error('标记阶段失败:', err)
+    alert('标记失败: ' + (err.response?.data?.detail || err.message))
+  }
+}
+
+async function handleCompleteTask() {
+  try {
+    await tasksStore.updateExistingTask(task.value.id, { current_node: 'completed', status: 'completed' })
+    task.value.current_node = 'completed'
+    task.value.status = 'completed'
+  } catch (err) {
+    console.error('完成任务失败:', err)
+    alert('操作失败: ' + (err.response?.data?.detail || err.message))
+  }
+}
+
 async function handleAddComment() {
   if (!newComment.value.trim()) return
   commenting.value = true
@@ -538,11 +572,20 @@ onMounted(() => {
 }
 .timeline-step { display: flex; flex-direction: column; align-items: center; position: relative; min-width: 80px; flex: 1; }
 .step-dot { width: 20px; height: 20px; border-radius: 50%; background: #e5e7eb; border: 3px solid #d1d5db; z-index: 1; transition: all 0.3s; }
-.step-dot.active { background: #667eea; border-color: #667eea; }
+.step-dot.completed { background: #10b981; border-color: #10b981; }
+.step-dot.current { background: #667eea; border-color: #667eea; box-shadow: 0 0 0 6px rgba(102, 126, 234, 0.2); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
 .step-label { font-size: 12px; color: #6b7280; text-align: center; margin-top: 6px; max-width: 80px; word-break: break-all; }
-.timeline-step.active .step-label { color: #667eea; font-weight: 500; }
+.step-label.current { color: #667eea; font-weight: 600; }
+.step-label-done { font-size: 10px; color: #10b981; margin-top: 2px; }
 .step-line { position: absolute; top: 10px; left: 50%; width: 100%; height: 3px; background: #e5e7eb; z-index: 0; }
+.step-line.completed { background: #10b981; }
 .step-line.active { background: #667eea; }
+
+.step-next-btn { position: absolute; top: -2px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: #667eea; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; font-size: 11px; transition: transform 0.2s; }
+.step-next-btn:hover { transform: scale(1.2); }
+.step-complete-btn { position: absolute; top: -8px; right: -30px; padding: 2px 10px; border-radius: 12px; background: #10b981; color: #fff; cursor: pointer; font-size: 11px; white-space: nowrap; }
+.step-complete-btn:hover { background: #059669; }
 
 /* 基本信息 */
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -590,7 +633,10 @@ onMounted(() => {
 .node-summary { flex-direction: column; align-items: flex-start; gap: 4px; }
 .node-summary-header { display: flex; align-items: center; gap: 8px; }
 .node-dot { width: 10px; height: 10px; border-radius: 50%; background: #e5e7eb; display: inline-block; }
-.node-dot.active { background: #667eea; }
+.node-dot.completed { background: #10b981; }
+.node-dot.current { background: #667eea; }
+.node-summary.completed { border-left: 3px solid #10b981; padding-left: 8px; }
+.node-summary.current { border-left: 3px solid #667eea; padding-left: 8px; }
 .node-summary-roles { font-size: 11px; color: #9ca3af; padding-left: 18px; }
 .assign-info { display: flex; flex-direction: column; gap: 2px; }
 .assign-info strong { font-size: 13px; color: #1f2937; }
