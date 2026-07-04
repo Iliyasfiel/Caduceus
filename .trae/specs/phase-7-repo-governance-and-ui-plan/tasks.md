@@ -34,15 +34,16 @@
 
 ## 第三阶段：推送与分支
 
-- [ ] Task 7: 提交并推送到 main
-  - [ ] SubTask 7.1: `git add .gitignore .trae/rules/project_rules.md demo-data/ README.md designingDocument/caduceus-ui-redesign.md`
-  - [ ] SubTask 7.2: `git rm -r --cached backend/.venv/` 已经在 Task 3 完成
-  - [ ] SubTask 7.3: `git commit` 使用 conventional 格式，commit message 描述"仓库治理规则化、清理 .venv 误提交、新增 demo-data 目录、新增 UI 重新设计规划独立设计文档"
-  - [ ] SubTask 7.4: `git push origin main` 推送到 main
+- [x] Task 7: 提交并推送到 main
+  - [x] SubTask 7.1: `git add .gitignore .trae/rules/project_rules.md demo-data/ README.md designingDocument/caduceus-ui-redesign.md`（含 spec 文件夹）
+  - [x] SubTask 7.2: `git rm -r --cached backend/.venv/` 已经在 Task 3 完成
+  - [x] SubTask 7.3: `git commit` 使用 conventional 格式，commit message `chore: 仓库治理规则化、新增 demo-data 目录、清理 .venv 误提交、新增 UI 重新设计规划独立设计文档`
+  - [x] SubTask 7.4: `git push origin main` 推送到 main（d8b9a92 → d454103）
+  - 注：实际执行中先单独 commit 了 Phase 6 catch-up（`f49afef`），再 commit Phase 7 spec（`d454103`）
 
-- [ ] Task 8: 创建 ui-redesign 隔离分支
-  - [ ] SubTask 8.1: `git checkout -b ui-redesign` 基于当前 main HEAD 创建本地分支
-  - [ ] SubTask 8.2: `git push -u origin ui-redesign` 创建并跟踪远程分支
+- [x] Task 8: 创建 ui-redesign 隔离分支
+  - [x] SubTask 8.1: `git checkout -b ui-redesign` 基于当前 main HEAD 创建本地分支
+  - [x] SubTask 8.2: `git push -u origin ui-redesign` 创建并跟踪远程分支
 
 # Task Dependencies
 - Task 1 与 Task 2 可并行

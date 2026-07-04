@@ -64,6 +64,105 @@ caduceus/
 └── README.md
 ```
 
+## 🎨 UI 重设计（ui-redesign 分支）
+
+`ui-redesign` 分支对前端视觉层进行系统性重写，**不动任何业务逻辑**。设计基线来自 Vercel 模板（`design_libraries/dl_builtin_vercel`），通过设计令牌 + 基础组件两层实现跨页面视觉一致。
+
+### 核心原则
+
+- **业务逻辑零改动**：所有 store 调用、API 调用、CRUD 流程、路由协议、字段排序、阶段流转、资源关联、分享 token 生成全部保留
+- **感知层替换**：`alert()` → `useToast()`；`confirm()` → `useConfirm()`（移动端友好、不依赖浏览器原生丑陋弹窗）
+- **token 化彻底**：所有页面样式只用 `var(--color-*)` / `var(--text-*)` / `var(--space-*)` 等 token，新页面自动跟随主题
+- **dark mode 自动跟随**：通过 `<html data-theme="dark">` 三态策略，无需在每个组件写媒体查询
+
+### 设计令牌层
+
+文件：`frontend/src/styles/tokens.css`
+
+| 类别 | token | 说明 |
+|------|-------|------|
+| 颜色 | `--color-primary` / `--color-destructive` / `--color-success` / 等 | 完整 Vercel 色板 + light/dark 双套 |
+| 文字 | `--text-xs/sm/base/lg/xl/2xl` + `--leading-tight/normal` | 字号阶梯 |
+| 间距 | `--space-1` ~ `--space-12` | 4px 基础单位 |
+| 圆角 | `--radius-sm/md/lg/full` | 4 / 8 / 12 / 999 |
+| 阴影 | `--shadow-sm/md/lg/xl` | 4 档阴影 |
+| 动效 | `--transition-fast/normal` | 150ms / 250ms |
+| 语义色 | `--badge-{neutral/info/success/warning/danger}-{bg,fg}` | Badge / Status 等语义配色 |
+
+**暗色模式三态**：`<html>` 上不设 `data-theme` 时跟随系统 `prefers-color-scheme`；可手动写 `light` / `dark` 覆盖（`useThemeStore` 管理）。
+
+### 基础组件（12 个）
+
+文件：`frontend/src/components/ui/`
+
+| 组件 | 用途 | 关键能力 |
+|------|------|----------|
+| `UiButton` | 按钮 | 4 variant × 3 size × loading/block |
+| `UiInput` | 输入框 | label / error / hint / prefix / type=number 自动转换 |
+| `UiSelect` | 下拉选择 | v-model + 状态枚举选项简化调用 |
+| `UiCard` | 卡片 | header / footer / hoverable / padding 控制 |
+| `UiBadge` | 状态徽章 | 5 tone × dark mode 自动反转 |
+| `UiModal` | 弹窗 | center / drawer 两种 variant + ESC 关闭 + overlay 点击 |
+| `UiTabs` | Tab 切换 | count 支持 + 自动激活样式 |
+| `UiEmptyState` | 空状态 | 图标 + 标题 + 描述 + CTA |
+| `UiToast` | 全局通知 | 消费 `useToastStore` |
+| `UiConfirm` | 确认弹窗 | 消费 `useConfirmStore` |
+| `UiSpinner` | 加载指示器 | 3 size + tone + label |
+| `UiThemeToggle` | 主题切换 | ☀ / ☾ / ◐ 三态循环 |
+
+### 全局 Store
+
+文件：`frontend/src/stores/`
+
+| Store | 用途 |
+|-------|------|
+| `useToastStore` + `useToast()` | 全局通知（success/error/info/warning），3 秒自动消失 |
+| `useConfirmStore` + `useConfirm()` | 全局确认弹窗，`useConfirm()(opts) → Promise<boolean>` |
+| `useThemeStore` | 主题三态 + localStorage 持久化 + 系统偏好监听 |
+
+### 已完成 Polish 范围
+
+**页面（8 个）**：
+
+- `Login.vue` — token 化 + UiInput/UiButton
+- `Dashboard.vue` — 统计卡 + 任务列表 token 化
+- `TaskList.vue` — UiCard/UiBadge/UiModal/UiSelect + 合并展示 + 创建弹窗
+- `TaskDetail.vue` — 时间线 / 信息区 / 字段表单 / 评论 / 日志 / 分享弹窗
+- `ResourceList.vue` — UiTabs + 双子模块（条目/类型）+ 3 个弹窗 + 操作日志
+- `AdminPanel.vue` — UiTabs + 3 个 tab（用户/角色/组）+ 3 个弹窗
+- `PipelineEditor.vue` — UiButton + 全局 toast
+- `SharePage.vue` — 公开页 token 化 + UiSpinner loading
+- `AppLayout.vue` — 顶栏 + 侧栏 Vercel 风格重构
+
+**子组件（5 个）**：
+
+- `NotificationBell.vue` — token 化
+- `ResourceSelector.vue` — token 化 + UiBadge + mobile 全屏化（5 行 CSS）
+- `TaskMergeGroup.vue` — token 化 + UiBadge 状态色
+- `PipelineCanvas.vue` — 布局层 token 化（Vue Flow 节点视觉保留）
+- `App.vue` — 挂载全局 `<UiToast />` + `<UiConfirm />`
+
+### 后续计划
+
+- **Phase 5（响应式适配）**：基于现有 token 层扩展 breakpoints（640 / 768 / 1024 / 1280）+ 通用工具类，桌面优先 + CSS 响应式
+- **移动端边界处理**：PipelineEditor 桌面专属（显示"请用桌面访问"占位）；SharePage 完整移动端适配；UiModal mobile 自动全屏
+
+### 开发约定（新增）
+
+新页面 / 新组件遵循：
+
+1. 样式**只用 token**（`var(--color-*)` / `var(--space-*)` 等），不写硬编码颜色 / 尺寸
+2. 弹窗**走 UiModal**（`v-model` 协议）；状态色**走 UiBadge tone**
+3. 全局通知**用 `useToast()`**；删除类操作**用 `useConfirm()`**
+4. import 用 `@/components/ui` 统一入口；Pinia store 用 `@/stores/` 统一管理
+
+### 验证记录
+
+- `npm run build` 0 错误 0 警告
+- 所有页面 `alert()` / `confirm()` 残留：0
+- 主题三态切换：light / dark / system 均正常
+- dark mode：已 token 化的所有页面自动跟随
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -249,6 +348,14 @@ npm run dev
 - 管理面板：角色管理（CRUD + role_type 配置）
 - 管理面板：组管理（CRUD + 成员统计）
 
+### 🔄 Phase 7 - UI 重设计（`ui-redesign` 分支）
+- 设计令牌层（颜色 / 字号 / 间距 / 圆角 / 阴影 / 动效 / 语义色）
+- 12 个基础组件（UiButton / UiInput / UiSelect / UiCard / UiBadge / UiModal / UiTabs / UiEmptyState / UiToast / UiConfirm / UiSpinner / UiThemeToggle）
+- 全局 Store：`useToast` / `useConfirm` / `useThemeStore`
+- 8 个页面 + 5 个子组件 polish（业务逻辑零改动）
+- dark mode 三态（light / dark / system）
+- 详见上方 `🎨 UI 重设计（ui-redesign 分支）` 章节
+
 ## 🤝 贡献指南
 
 欢迎贡献代码！请遵循以下规范：
@@ -260,6 +367,9 @@ npm run dev
 - 状态管理使用 Pinia，放在 `src/stores/` 目录
 - 组件使用 PascalCase 命名
 - Python 文件使用 snake_case 命名
+- **前端样式**：只使用 `frontend/src/styles/tokens.css` 中的设计令牌，不写硬编码颜色 / 尺寸
+- **前端交互**：弹窗优先使用 `UiModal`，状态色使用 `UiBadge` tone，全局通知用 `useToast()`，确认操作用 `useConfirm()`
+- 详细约定见上方 `🎨 UI 重设计` 章节
 
 ## 📄 开源协议
 
