@@ -1,0 +1,23 @@
+# Checklist
+
+- [x] Notification 模型包含 recipient, type, title, content, link, is_read, created_at 字段
+- [x] makemigrations + migrate 无报错（0001_initial 迁移成功执行）
+- [x] NotificationSerializer 正确序列化所有字段
+- [x] NotificationViewSet 仅返回当前登录用户的通知（get_queryset 过滤 request.user.notifications）
+- [x] NotificationViewSet 包含 unread_count action 返回未读计数
+- [x] NotificationViewSet 包含 mark_all_read action 批量标记已读
+- [x] notifications API 路由已注册到 backend/config/urls.py
+- [x] NotificationConsumer 继承 AsyncWebsocketConsumer，按用户分组
+- [x] ASGI WebSocket 路由 /ws/notifications/ 已注册
+- [x] WebSocket 连接时认证用户，未登录拒绝连接
+- [x] NotificationBackend(ABC) 定义 send 抽象方法
+- [x] WebSocketBackend.send() 通过 channel_layer 发送消息
+- [x] notifications/signals.py 监听 TaskLog post_save 信号联动创建 Notification
+- [x] 信号推送调用 WebSocketBackend.send() 发送实时消息
+- [x] 前端 notifications store connectWebSocket() 建立 /ws/notifications/ 连接
+- [x] WebSocket 收到消息时更新 store 中的 notifications 和 unreadCount
+- [x] NotificationBell.vue 点击通知项 → 标记已读 + router 跳转
+- [x] NotificationBell.vue badge 实时响应 WebSocket 推送
+- [x] 所有新文件包含文件头中文注释
+- [x] 所有函数/方法包含中文注释
+- [x] README.md Phase 3 标记为 ✅

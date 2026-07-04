@@ -448,47 +448,34 @@ Verify: Notifications appear in real-time without page refresh.
 
 ---
 
-### Phase 4: Resources
+### Phase 4: Resources（资源库生命周期增强）✅
 
-#### Task 4.1: Implement resources backend
+#### Task 4.1: Implement resources backend ✅
+- ResourceTypeViewSet + ResourceItemViewSet + ResourceLogViewSet 全部就绪
+- 路由已激活：`/api/resources/resource-types/`、`/api/resources/resource-items/`、`/api/resources/resource-logs/`
 
-**Files:** `backend/apps/resources/` (models, api/)
+#### Task 4.2: 扩展 ResourceType 模型（lifecycle_config）✅
+- ResourceType 已包含 `lifecycle_config` JSONField 字段
+- 迁移 0002 已执行
 
-**models.py:**
-```python
-class ResourceType(models.Model):
-    name = models.CharField(max_length=100, verbose_name='资源类型')
-    icon = models.CharField(max_length=50, blank=True)
-    schema = models.JSONField(default=list, blank=True, verbose_name='字段定义')
+#### Task 4.3: 新增 ResourceLog 模型 ✅
+- ResourceLog 模型已实现（resource/event_key/operator/summary/details/created_at）
+- ResourceLogViewSet + ResourceLogSerializer 已就绪
 
-class ResourceItem(models.Model):
-    resource_type = models.ForeignKey(ResourceType, on_delete=models.CASCADE, related_name='items')
-    name = models.CharField(max_length=200, verbose_name='资源名称')
-    fields = models.JSONField(default=dict, blank=True, verbose_name='字段值')
-    extra_fields = models.JSONField(default=dict, blank=True, verbose_name='自定义扩展参数')
-    available = models.BooleanField(default=True, verbose_name='可用')
+#### Task 4.4: ResourceLog → status 自动推导 + 通知联动 ✅
+- signals.py 已实现：post_save 信号 → 匹配 lifecycle_config → 更新 resource.status → 按 notify_roles 创建 Notification
+- apps.py ready() 已注册 signals
 
-class ResourceBooking(models.Model):
-    resource = models.ForeignKey(ResourceItem, on_delete=models.CASCADE, related_name='bookings')
-    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE, related_name='resource_bookings')
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    status = models.CharField(max_length=20,
-        choices=[('pending','待确认'),('confirmed','已确认'),('released','已释放')],
-        default='pending')
-```
+#### Task 4.5: ResourceItemSerializer status 只读 ✅
+- status 已在序列化器 read_only_fields 中
 
-**API:** ResourceTypeViewSet, ResourceItemViewSet, ResourceBookingViewSet.
+#### Task 4.6: 前端资源管理页面 ✅
+- ResourceList.vue：Tab 切换 + 资源类型管理 + 资源条目 CRUD + 操作日志查看
+- ResourceSelector.vue：模态选择器，类型筛选 + 多选条目 + 已关联标记
+- TaskDetail.vue：右侧面板集成资源关联 + ResourceSelector 弹窗
 
-#### Task 4.2: Frontend ResourceSelector and ResourceList
-
-**Files:** Create `frontend/src/components/ResourceSelector.vue`, `frontend/src/views/ResourceList.vue`
-
-- Admin panel to create/modify resource types and items
-- ResourceSelector embedded in TaskDetail for linking resources
-- Resource availability display
-
-Verify: Resource types can be created, items added, tasks can link resources.
+#### Task 4.7: API 端点验证 ✅
+- 全部端点 curl 验证通过
 
 ---
 
@@ -555,3 +542,132 @@ class DashboardStatsView(APIView):
 **Type consistency:** All model refs, serializer refs, and API endpoints consistent across tasks.
 **Task dependency order:** Tasks build sequentially (Phase 0 → 1 → 2 → 3 → 4 → 5).
 **No missing tasks detected.**
+
+---
+
+## Implementation Lessons Learned (Phase 0–3)
+
+以下是在 Phase 0~3 实际开发中暴露的问题及解决方案，作为后续 Phase 和迭代的参考。
+
+### 1. 前端 API URL 与 DRF Router 路径对齐
+
+**问题**：DRF `DefaultRouter` 注册 `router.register(r'pipelines', PipelineViewSet)` 后，端点路径为 `/pipelines/`。urls.py 中 `path('api/pipeline/', include(...))` 再加前缀，最终完整路径为 `/api/pipeline/pipelines/`。但前端 API 层写成了 `/pipeline/`（缺少 `/pipelines/` 后缀），导致 405/404。
+
+**规则**：**前端 `src/api/*.js` 中的 URL 必须与 DRF router 生成的完整路径严格一致。** 每个模块开发完成后，用 curl 验证端点可达性：
+
+```bash
+# 以 pipeline 为例
+curl -X POST http://localhost:8000/api/pipeline/pipelines/ \
+  -H "Content-Type: application/json" \
+  -d '{"name":"test","nodes":[],"edges":[]}' \
+  -b /tmp/cookies.txt
+```
+
+**路径对照表（Vite 代理后 baseURL 为 /api）：**
+
+| 模块 | 前端调用 | 后端路由注册 | 最终完整路径 |
+|------|----------|-------------|-------------|
+| accounts | `/accounts/auth/login/` | `router.register('auth')` | `/api/accounts/auth/login/` |
+| tasks | `/tasks/` | `router.register('tasks')` + url `api/tasks/` | `/api/tasks/` |
+| pipeline | `/pipeline/pipelines/` | `router.register('pipelines')` + url `api/pipeline/` | `/api/pipeline/pipelines/` |
+| notifications | `/notifications/notifications/` | `router.register('notifications')` + url `api/notifications/` | `/api/notifications/notifications/` |
+| resources | `/resources/resource-types/` | `router.register('resource-types')` + url `api/resources/` | `/api/resources/resource-types/` |
+
+### 2. 前后端数据格式需双向转换
+
+**问题**：后端 JSONB 存储 nodes 为扁平格式 `{id, label, fields_config, roles, resource_types}`，Vue Flow 画布需要嵌套格式 `{id, type, position, data: {label, ...}}`。v-model 桥接时只处理了单向转换，导致加载已有数据时 `node.data` 为 undefined。
+
+**规则**：**任何涉及 v-model 在前端组件与后端 JSON 之间传递数据的场景，必须在输入（model → 组件）和输出（组件 → model）两端都做格式转换。** 且要兼容两种数据来源（用户新建的 Vue Flow 格式 + 后端加载的扁平格式），使用可选链兜底：
+
+```javascript
+// 兼容两种格式的输入转换
+label: n.data?.label || n.label || '默认值',
+
+// 输出转换（去掉 Vue Flow 特有字段）
+nodes: nodes.value.map(n => ({
+  id: n.id,
+  label: n.data?.label,
+  fields_config: n.data?.fields_config || [],
+  roles: n.data?.roles || [],
+  resource_types: n.data?.resource_types || []
+}))
+```
+
+### 3. CSRF 豁免需重写 DRF 认证类而非视图装饰器
+
+**问题**：前后端分离（Vite :3000 ↔ Django :8000）时，即使 `AuthViewSet` 加了 `@method_decorator(csrf_exempt)`，登录仍返回 403。原因是 DRF 的 `SessionAuthentication.enforce_csrf()` 在认证层强制检查，视图级 `csrf_exempt` 无法绕过。
+
+**解决方案**：创建自定义认证类，重写 `enforce_csrf` 为空操作，在 `settings.py` 中将 `DEFAULT_AUTHENTICATION_CLASSES` 替换为此类：
+
+```python
+# apps/accounts/authentication.py
+from rest_framework.authentication import SessionAuthentication
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        pass  # 前后端分离架构下豁免 DRF 层 CSRF 检查
+
+# config/settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'apps.accounts.authentication.CsrfExemptSessionAuthentication',
+    ],
+    ...
+}
+```
+
+### 4. 占位模块需提供最小可用 API
+
+**问题**：Phase 4 的 resources 模块只有 models.py，没有 serializers / views / urls。但 Phase 2 的 PipelineEditor.vue 在加载时调用了 `getResourceTypes()`，导致 404 错误虽被 catch 但仍然污染控制台。
+
+**规则**：**任何被其他 Phase 引用的占位模块，必须在占位时提供最小 API 层**（至少一个 ViewSet + Serializer + 路由注册），返回空列表即可，避免跨阶段引用时产生 404。
+
+### 5. JavaScript 导出未定义标识符会阻断整个路由
+
+**问题**：`tasks.js` 的 `export default { ..., getTaskLogs }` 引用了不存在的函数，导致该模块加载失败。由于 `router.js` 中所有页面组件使用 `() => import(...)` 懒加载，模块依赖链断裂后所有路由页面全部白屏。
+
+**规则**：**default export 中的每个 key 必须对应一个已定义的导出函数。** 添加新 API 函数时，先定义函数体，再放入 export。使用 ESLint 的 `no-undef` 规则可提前发现此类问题。
+
+### 6. ASGI 配置中 Django settings 必须先于 Channels 导入
+
+**问题**：`config/asgi.py` 在 `os.environ.setdefault('DJANGO_SETTINGS_MODULE', ...)` 之前就 `import apps`，导致 settings 未加载时模块找不到 routing 属性，daphne 启动崩溃。
+
+**规则**：**ASGI 配置中，`os.environ.setdefault` 必须放在所有 Django/Channels 模块导入之前。** Channels routing 的 import 放在 `get_asgi_application()` 调用之后。
+
+```python
+# 正确顺序
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')  # 第 1 步
+
+from django.core.asgi import get_asgi_application
+django_asgi_app = get_asgi_application()  # 第 2 步：Django 初始化
+
+from apps.notifications.routing import websocket_urlpatterns  # 第 3 步：业务 import
+```
+
+### 7. API 端点验证清单
+
+每个后端 API 模块开发完成后，应执行以下验证：
+
+- [ ] `curl` 测试所有端点（GET list, POST create, GET detail, PATCH update），确认返回 200/201
+- [ ] 登录状态下的端点使用 `-b cookies.txt` 携带 session
+- [ ] 对照 `frontend/src/api/*.js` 中的 URL 与后端实际路由逐个比对
+- [ ] 检查 `backend/config/urls.py` 中对应路由行未被注释
+
+### 8. 数据格式变更需全链路同步
+
+**问题**：Phase 1 设计 `Task.fields` 为 `default=dict`（对象），Phase 2 管线 fields_config 为数组格式。创建带管线任务时，管线字段初始化为数组但模型仍期望 dict，导致类型不匹配。Phase 1→2 格式调整未同步到所有下游代码。
+
+**规则**：**当上游模型字段格式变更时，必须同时更新所有序列化器、视图 create/update 逻辑、前端 API 调用和 store 中的数据处理代码。** 建议在设计文档中明确标注字段格式约定，防止 Phase 间出现 JSONB 结构不一致。
+
+### 9. 功能级合并展示逻辑不可硬编码
+
+**问题**：Phase 3 实际实施中，"任务字段按角色优先级排序"被实现在前端 `sortedFields` computed 中，依赖 `authStore.user.role_assignments`。但 `role_assignments` 返回的是 `role` ID，不是 `role.name`，管线 fields_config 中 `priority_roles` 存储的也可能是 ID。两者匹配逻辑需在开发前明确约定。
+
+**规则**：**跨模块引用字段（如 priority_roles）时必须约定使用 ID 还是 name 作为匹配键。** 建议统一使用 ID 匹配（避免改名后断裂），并为每个关联字段在 serializer 中同时输出 `_id` 和 `_name` 方便前端选择。
+
+### 10. 占位 model 与实际 API 的字段名差异
+
+**问题**：Phase 2 PipelineEditor.vue 调用 `getResourceTypes()` 时，后端 ResourceType 模型的字段名与设计文档中的 `schema` 不同（实际为 `field_schema`），虽然影响较小但说明占位模型在设计文档更新后未同步。
+
+**规则**：**设计文档中的字段名应与实际模型代码定期对照。** 在 Phase 开始前应先用 `inspectdb` 或读取 models.py 确认字段名，避免按文档写出与实际不一致的前端调用代码。

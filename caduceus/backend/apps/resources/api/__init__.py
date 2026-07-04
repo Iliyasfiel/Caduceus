@@ -1,1 +1,0 @@
-# Caduceus Resources API
