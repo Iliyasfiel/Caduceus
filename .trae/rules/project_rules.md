@@ -55,3 +55,23 @@
 ## Git Commit Convention
 - Use conventional commit format: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
 - Commit messages in Chinese preferred for this project
+
+## 仓库治理
+
+### 虚拟环境
+- **禁止**将任何 Python 虚拟环境提交到远程仓库，包括但不限于：`venv/`、`.venv/`、`env/`、`.env-virtual/`、`virtualenv/` 等。
+- 依赖通过 `requirements.txt`（或 `pyproject.toml`）管理。Clone 仓库后应在本地重建虚拟环境：
+  ```bash
+  python3 -m venv backend/.venv
+  source backend/.venv/bin/activate
+  pip install -r backend/requirements.txt
+  ```
+- 已在 `.gitignore` 中忽略 `venv/` 与 `.venv/`，避免误提交。
+
+### 演示数据（demo-data）
+- 根目录下的 `demo-data/` 目录用于存放**开发演示用的临时数据**（如示例资源类型、示例任务等），用于手动验证页面效果。
+- **`demo-data/` 允许提交**到远程仓库（与 `node_modules/`、`.venv/` 等被忽略的目录形成对比）。
+- 存放内容规范：
+  - ✅ 允许：非敏感的、可复现的、用于手动验证的演示数据（如示例资源类型 JSON、示例用户、示例任务）。
+  - ❌ 禁止：生产数据、真实用户隐私、任何含 API Key/Token/密码的内容。
+- 使用方式详见 `demo-data/README.md` 与 `README.md` 的"演示数据（demo-data）"章节。

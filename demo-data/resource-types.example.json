@@ -1,0 +1,62 @@
+[
+  {
+    "name": "会议室 A101",
+    "type_category": "room",
+    "description": "10 人会议室，配备投影仪与白板",
+    "capacity": 10,
+    "unit": "间",
+    "is_consumable": false,
+    "metadata": {
+      "location": "总部 1 楼",
+      "equipment": ["projector", "whiteboard", "video_conf"]
+    }
+  },
+  {
+    "name": "ThinkPad X1 Carbon Gen11",
+    "type_category": "device",
+    "description": "开发用笔记本，可短期借出",
+    "capacity": 1,
+    "unit": "台",
+    "is_consumable": false,
+    "metadata": {
+      "asset_tag_prefix": "DEV-",
+      "os": "Ubuntu 22.04"
+    }
+  },
+  {
+    "name": "A4 复印纸",
+    "type_category": "consumable",
+    "description": "80g 复印纸，整箱领取",
+    "capacity": 500,
+    "unit": "张/包",
+    "is_consumable": true,
+    "metadata": {
+      "brand": "UPM",
+      "stock_location": "1 楼物资柜"
+    }
+  },
+  {
+    "name": "服务器临时权限",
+    "type_category": "permission",
+    "description": "生产环境只读权限，最多保留 7 天",
+    "capacity": 1,
+    "unit": "次",
+    "is_consumable": true,
+    "metadata": {
+      "system": "production",
+      "max_duration_days": 7
+    }
+  },
+  {
+    "name": "外部专家 1v1 咨询",
+    "type_category": "service",
+    "description": "外部技术专家按小时咨询服务",
+    "capacity": 1,
+    "unit": "小时",
+    "is_consumable": true,
+    "metadata": {
+      "vendor_pool": ["vendor-a", "vendor-b"],
+      "rate_cny_per_hour": 2000
+    }
+  }
+]

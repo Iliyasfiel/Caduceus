@@ -242,6 +242,13 @@ npm run dev
 - 公开分享页面（SharePage.vue，无需登录查看进度+公开字段）
 - 任务详情页分享链接生成（复制链接 + 过期时间设置）
 
+### ✅ Phase 6 - Stage Marking & Admin Panel
+- 管线阶段标记完成（时间轴三态：已完成/进行中/未开始，点击推进）
+- 阶段标记后通知下一阶段角色（自动创建 Notification）
+- 管理面板：用户管理（创建/编辑/禁用/角色分配）
+- 管理面板：角色管理（CRUD + role_type 配置）
+- 管理面板：组管理（CRUD + 成员统计）
+
 ## 🤝 贡献指南
 
 欢迎贡献代码！请遵循以下规范：
@@ -263,3 +270,28 @@ Apache 2.0 License
 - [产品需求文档 (PRD)](designingDocument/caduceus-prd.md)
 - [设计文档](designingDocument/caduceus-design.md)
 - [实现计划](designingDocument/caduceus-implementation.md)
+
+## 演示数据（demo-data）
+
+根目录的 [`demo-data/`](./demo-data/) 目录用于存放开发演示用的临时数据，**允许提交**到远程仓库。
+
+### 用途
+- 在本地手动验证页面效果时（Dashboard、任务详情、资源列表、Pipeline 编辑器等）可作为参考数据
+- 新成员 onboarding 时快速了解各模块的数据结构
+
+### 典型内容
+- `resource-types.example.json`：5 种典型资源类型示例（会议室 / 设备 / 耗材 / 权限 / 服务）
+
+### 加载方式
+详见 [`demo-data/README.md`](./demo-data/README.md)。常用方式：
+- **手动参考**：对照 JSON 字段在后台页面录入
+- **Django fixtures 批量导入**：`python manage.py loaddata <fixture_path>`（需先转为标准 fixtures 格式）
+
+### 清理
+本目录数据**不影响业务代码运行**，随时可整体删除。需要重置开发数据库时执行 `python manage.py flush`。
+
+### 仓库治理约束
+- ✅ 允许提交：`demo-data/`
+- ❌ 禁止提交：虚拟环境（`venv/`、`.venv/` 等）、`node_modules/`、`db.sqlite3`、`.env`、用户隐私数据
+
+详细规则见 `.trae/rules/project_rules.md` 的"仓库治理"小节。
