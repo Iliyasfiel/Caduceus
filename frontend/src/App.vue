@@ -1,32 +1,20 @@
 <!--
 Caduceus 根组件
-作为整个应用的容器，渲染路由视图
+作为整个应用的容器，渲染路由视图 + 全局 Toast 容器
+样式一律由 tokens.css / base.css 提供，本文件不写硬编码值。
 -->
 <template>
   <router-view />
+  <UiToast />
 </template>
 
 <script setup>
-// 根组件无需额外逻辑，路由视图会根据当前路由渲染对应页面
+/**
+ * 根组件脚本：Toast 容器常驻，业务侧通过 useToast() 调用。
+ */
+import { UiToast, UiConfirm } from '@/components/ui'
 </script>
 
 <style>
-/* 全局样式 */
-:root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #213547;
-  background-color: #ffffff;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-}
-
-#app {
-  width: 100%;
-  min-height: 100vh;
-}
+/* 全局基础样式已迁移到 src/styles/base.css，本文件留空 */
 </style>
