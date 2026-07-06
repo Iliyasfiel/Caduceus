@@ -13,6 +13,7 @@
 | [`ui-roadmap-p1.md`](./ui-roadmap-p1.md) | 原 `caduceus-ui-redesign.md` §4 / §9 | 复合组件决策 / Phase 5 工具类 / 后续 Spec | 长期保留（路线图参考） |
 | [`resource-v2-lifecycle-discussion.md`](./resource-v2-lifecycle-discussion.md) | 客户场景「舞台灯光全生命周期管理」讨论 | 资源库 v2 方向草案：事件流载体定位 / 资源模板独立画布 / 任务 ↔ 资源双向耦合 | 等待客户反馈后再决定要不要沉淀进正式设计文档 |
 | [`uiselect-v2-plan.md`](./uiselect-v2-plan.md) | 2026-07-06 在 `feature/task-list-ui-optimize` 分支讨论 | UiSelect 重构为自渲染 popper 计划：修复暗色模式 bug + 键盘导航 + 暴露 3 个可选能力（搜索 / 多选 / 异步） | 待用户确认后实施 |
+| [`tasklist-optimization-options.md`](./tasklist-optimization-options.md) | 同上分支 | TaskList 优化方向讨论：10 项技术债 + 建议（A 设计系统 / B 视觉 / C 响应式 / D 筛选搜索 / E 交互 / F 性能），按工作量 + 影响分类 | 待用户勾选/排序后再进入正式设计阶段 |
 
 ## 清理规则
 
