@@ -8,7 +8,7 @@
 >
 > 不包含产品需求条目（→ [`caduceus-prd.md`](./caduceus-prd.md)）和分阶段实施步骤（→ [`caduceus-implementation.md`](./caduceus-implementation.md)）。
 >
-> 前端 UI 视觉风格、组件清单、主题策略见本文档 §十一、§十二（设计风格基线 + 基础组件清单）；组件 API 参考 / Polish 记录 / Drawer 改造 见 [`designingDocument/dev-tmp/`](./dev-tmp/)。
+> 前端 UI 视觉风格、组件清单、主题策略见本文档 §十一、§十二（设计风格基线 + 基础组件清单）；组件 API 参考 / Polish 记录 / Drawer 改造 见 [`dev-tmp/design/`](../../dev-tmp/design/)。
 >
 > 完整文档索引见 [README §📚 文档索引](../README.md#-文档索引)。
 

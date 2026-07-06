@@ -189,7 +189,7 @@ npx vite --host --port 3000
 | 📐 [设计文档 `caduceus-design.md`](designingDocument/caduceus-design.md) | 技术栈、架构、数据模型、接口约定、权限、关键流程，**§11 风格基线 + §12 基础组件清单** | 架构师 / 前端 / 想了解“怎么设计” |
 | 🛠️ [实施计划 `caduceus-implementation.md`](designingDocument/caduceus-implementation.md) | 分阶段任务、文件结构、每步实现与验收 | 开发 / 想认领任务 |
 | 📏 [`.trae/rules/project_rules.md`](.trae/rules/project_rules.md) | 项目硬约束（命名 / 注释 / 仓库治理 / dev-tmp） | 所有贡献者 |
-| 🗂️ [`designingDocument/dev-tmp/`](designingDocument/dev-tmp/) | 临时文档（组件 API 参考 / Polish 记录 / P1 路线图） | 任何改动 UI 的人 |
+| 🗂️ [`dev-tmp/design/`](dev-tmp/design/) | UI 临时文档（组件 API 参考 / 设计原则 / Polish 记录 / 路线图） | 任何改动 UI 的人 |
 
 ## 📦 演示数据（demo-data）
 

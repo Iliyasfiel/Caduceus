@@ -6,7 +6,7 @@
 >
 > 不包含产品需求背景（→ [`caduceus-prd.md`](./caduceus-prd.md)）和架构/数据模型细节（→ [`caduceus-design.md`](./caduceus-design.md)）。
 >
-> UI 风格基线见 [`caduceus-design.md` §十一、§十二](./caduceus-design.md)；组件 API 参考见 [`designingDocument/dev-tmp/ui-component-api-reference.md`](./dev-tmp/ui-component-api-reference.md)。
+> UI 风格基线见 [`caduceus-design.md` §十一、§十二](./caduceus-design.md)；组件 API 参考见 [`dev-tmp/design/ui-component-api-reference.md`](../../dev-tmp/design/ui-component-api-reference.md)。
 >
 > 完整文档索引见 [README §📚 文档索引](../README.md#-文档索引)。
 

@@ -65,3 +65,46 @@ ol {
   padding: 0;
   list-style: none;
 }
+
+/*
+ * 隐藏滚动条但保留滚动能力
+ *
+ * 适用于：
+ * - 全局 body 滚动
+ * - 通用容器滚动（.scrollable、auto 加的滚动条）
+ * - 横向 / 纵向滚动
+ *
+ * Firefox：通过 scrollbar-width: none 隐藏
+ * WebKit（Chrome/Edge/Safari）：通过伪元素 width:0 / display:none 隐藏
+ */
+html,
+body,
+.scrollable {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.scrollable::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/*
+ * 全局 hide-scrollbar 工具类
+ *
+ * 用法：直接在元素上添加 `hide-scrollbar` 即可隐藏该容器的滚动条，
+ * 同时保留原生滚动行为。
+ */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
