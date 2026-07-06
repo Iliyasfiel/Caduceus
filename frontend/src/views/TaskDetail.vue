@@ -21,18 +21,14 @@ Caduceus 任务详情页面
           </UiBadge>
         </div>
         <div class="toolbar__right">
-          <select
-            v-model="task.status"
-            class="status-select"
-            :class="'status-' + task.status"
-            @change="handleStatusChange"
-          >
-            <option value="draft">草稿</option>
-            <option value="pending">待处理</option>
-            <option value="in_progress">进行中</option>
-            <option value="completed">已完成</option>
-            <option value="cancelled">已取消</option>
-          </select>
+          <div :class="['status-select', 'status-' + task.status]">
+            <UiSelect
+              v-model="task.status"
+              :options="statusOptions"
+              size="sm"
+              @change="handleStatusChange"
+            />
+          </div>
           <UiButton
             variant="primary"
             size="sm"
@@ -328,8 +324,17 @@ import { getTaskAssignments } from '@/api/tasks'
 import { useToast } from '@/stores/toast'
 import { useConfirm } from '@/stores/confirm'
 import {
-  UiButton, UiCard, UiBadge, UiEmptyState, UiModal, UiIcon
+  UiButton, UiCard, UiBadge, UiEmptyState, UiModal, UiIcon, UiSelect
 } from '@/components/ui'
+
+// 状态选项（UiSelect 用）：与后端 choices 保持一致
+const statusOptions = [
+  { label: '草稿', value: 'draft' },
+  { label: '待处理', value: 'pending' },
+  { label: '进行中', value: 'in_progress' },
+  { label: '已完成', value: 'completed' },
+  { label: '已取消', value: 'cancelled' }
+]
 
 const route = useRoute()
 const tasksStore = useTasksStore()
