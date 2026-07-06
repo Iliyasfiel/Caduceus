@@ -48,5 +48,7 @@ Thumbs.db
 venv/
 .venv/
 
-# Development temporary files (see .trae/rules/project_rules.md)
-dev-tmp/
+# Development temporary files
+# 注意：dev-tmp/ 不再被全局忽略。
+# 当前策略：纳入 git 跟踪，由开发者定期手动清理（见 dev-tmp/README.md 清理规则）。
+# 如未来要恢复忽略，添加：dev-tmp/
