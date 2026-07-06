@@ -1,0 +1,24 @@
+{
+  "name": "caduceus-frontend",
+  "version": "0.1.0",
+  "description": "Caduceus 协同工作平台前端",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "pinia": "^2.3.0",
+    "axios": "^1.7.9",
+    "@vue-flow/core": "^1.41.5",
+    "@vue-flow/minimap": "^1.5.0",
+    "@vue-flow/controls": "^1.1.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.0.5"
+  }
+}

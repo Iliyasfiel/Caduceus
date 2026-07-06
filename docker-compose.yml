@@ -1,0 +1,70 @@
+# Caduceus 开发环境 Docker Compose 配置
+# 包含 PostgreSQL、Redis 和后端服务
+
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: caduceus-postgres
+    environment:
+      POSTGRES_DB: caduceus
+      POSTGRES_USER: caduceus
+      POSTGRES_PASSWORD: caduceus_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U caduceus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis（Channels channel layer + 缓存）
+  redis:
+    image: redis:7-alpine
+    container_name: caduceus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Django 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+    container_name: caduceus-backend
+    environment:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: "dev-secret-key-change-in-production"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,backend"
+      POSTGRES_DB: caduceus
+      POSTGRES_USER: caduceus
+      POSTGRES_PASSWORD: caduceus_password
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./backend:/app
+      - backend_static:/app/staticfiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_static:

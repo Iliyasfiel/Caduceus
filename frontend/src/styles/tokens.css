@@ -1,0 +1,221 @@
+/*
+ * Caduceus 设计令牌层（Design Tokens）
+ *
+ * 全部由挂载中的 Vercel 设计系统的颜色与字体令牌派生而来，并按 caduceus-design.md §11
+ * 扩展了：字号 / 间距 / 圆角 / 阴影 / 动效的语义层。
+ *
+ * 强约束：所有 .vue 的 <style> 只允许引用本文件定义的 CSS 变量，禁止硬编码颜色与字号。
+ */
+
+/* === 颜色（直接复用 Vercel tokens） === */
+:root {
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+
+  --color-primary: #121212;
+  --color-primary-foreground: #fafafa;
+
+  --color-secondary: #f5f5f5;
+  --color-secondary-foreground: #171717;
+
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #858585;
+
+  --color-accent: #f5f5f5;
+  --color-accent-foreground: #171717;
+
+  --color-destructive: #e7000b;
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: #e8e8e8;
+  --color-input: #e5e5e5;
+  --color-ring: #0d0d0d;
+
+  --color-success-subtle: #14241a;
+  --color-success: #62d178;
+  --color-success-strong: #8be59c;
+  --color-success-foreground: #0a0a0a;
+
+  --color-error-subtle: #2a1517;
+  --color-error: #ff6166;
+  --color-error-strong: #ff9a9d;
+  --color-error-foreground: #0a0a0a;
+
+  /* Chart — 仅数据可视化使用，强调色 */
+  --color-chart-1: #91c5ff;
+  --color-chart-2: #3a81f6;
+  --color-chart-3: #2563ef;
+  --color-chart-4: #1a4eda;
+  --color-chart-5: #1f3fad;
+
+  /* === 场景语义（按规划文档 §1 映射） === */
+  --bg-canvas: var(--color-background);
+  --bg-surface: var(--color-card);
+  --bg-elevated: var(--color-popover);
+  --bg-muted: var(--color-muted);
+
+  --text-primary: var(--color-foreground);
+  --text-secondary: var(--color-muted-foreground);
+  --text-muted: var(--color-muted-foreground);
+  --text-inverse: var(--color-primary-foreground);
+
+  --border-subtle: var(--color-border);
+  --border-strong: var(--color-foreground);
+
+  /* === Badge 语义色（dark mode 时通过下方覆盖） === */
+  --badge-neutral-bg: #f5f5f5;
+  --badge-neutral-fg: #525252;
+
+  --badge-info-bg: #dbeafe;
+  --badge-info-fg: #1e3a8a;
+
+  --badge-success-bg: #d1fae5;
+  --badge-success-fg: #065f46;
+
+  --badge-warning-bg: #fef3c7;
+  --badge-warning-fg: #92400e;
+
+  --badge-danger-bg: #fee2e2;
+  --badge-danger-fg: #991b1b;
+
+  /* === 字号（Vercel 未提供 type scale，按规划文档 §1 定义） === */
+  --font-sans: "Geist", ui-sans-serif, sans-serif, system-ui;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --text-xs: 0.75rem;     /* 12 */
+  --text-sm: 0.875rem;    /* 14 */
+  --text-base: 1rem;      /* 16 */
+  --text-lg: 1.125rem;    /* 18 */
+  --text-xl: 1.25rem;     /* 20 */
+  --text-2xl: 1.5rem;     /* 24 */
+  --text-3xl: 1.875rem;   /* 30 */
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* === 间距（base = 4px，按规划文档 §1） === */
+  --space-1: 0.25rem;     /* 4 */
+  --space-2: 0.5rem;      /* 8 */
+  --space-3: 0.75rem;     /* 12 */
+  --space-4: 1rem;        /* 16 */
+  --space-5: 1.25rem;     /* 20 */
+  --space-6: 1.5rem;      /* 24 */
+  --space-8: 2rem;        /* 32 */
+  --space-10: 2.5rem;     /* 40 */
+  --space-12: 3rem;       /* 48 */
+
+  /* === 圆角（Vercel 全系统统一 8px，按规划文档扩展阶梯） === */
+  --radius-sm: 0.25rem;   /* 4 */
+  --radius-md: 0.5rem;    /* 8 — Vercel 默认 */
+  --radius-lg: 0.75rem;   /* 12 */
+  --radius-xl: 1rem;      /* 16 */
+  --radius-full: 9999px;
+
+  /* === 阴影（Vercel 阴影近乎不可见，靠 border + 背景层次切分；按规划文档略加强以保持 dashboard 可读） === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  /* === 动效 === */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease;
+}
+
+/*
+ * 暗色模式策略：
+ *   - data-theme="dark" 由 useThemeStore 写入 <html>，优先级最高（手动切换）
+ *   - data-theme="light" 强制亮色
+ *   - 都不设置时，遵循 prefers-color-scheme（系统跟随）
+ * 三个分支共用同一套 dark 色板。
+ */
+:root[data-theme='dark'],
+:root[data-theme='light'] {
+  color-scheme: light dark;
+}
+
+:root[data-theme='dark'] {
+  --color-background: #0a0a0a;
+  --color-foreground: #fafafa;
+  --color-card: #171717;
+  --color-card-foreground: #fafafa;
+  --color-popover: #262626;
+  --color-popover-foreground: #fafafa;
+
+  --color-primary: #e5e5e5;
+  --color-primary-foreground: #171717;
+
+  --color-muted: #262626;
+  --color-muted-foreground: #a1a1a1;
+
+  --color-accent: #404040;
+  --color-accent-foreground: #fafafa;
+
+  --color-destructive: #ff6467;
+
+  --color-border: #282828;
+  --color-input: #343434;
+  --color-ring: #737373;
+
+  /* Dark badge 配色：低饱和背景 + 高对比前景 */
+  --badge-neutral-bg: #262626;
+  --badge-neutral-fg: #d4d4d4;
+
+  --badge-info-bg: #1e3a8a;
+  --badge-info-fg: #dbeafe;
+
+  --badge-success-bg: #14532d;
+  --badge-success-fg: #bbf7d0;
+
+  --badge-warning-bg: #78350f;
+  --badge-warning-fg: #fde68a;
+
+  --badge-danger-bg: #7f1d1d;
+  --badge-danger-fg: #fecaca;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-background: #0a0a0a;
+    --color-foreground: #fafafa;
+    --color-card: #171717;
+    --color-card-foreground: #fafafa;
+    --color-popover: #262626;
+    --color-popover-foreground: #fafafa;
+
+    --color-primary: #e5e5e5;
+    --color-primary-foreground: #171717;
+
+    --color-muted: #262626;
+    --color-muted-foreground: #a1a1a1;
+
+    --color-accent: #404040;
+    --color-accent-foreground: #fafafa;
+
+    --color-destructive: #ff6467;
+
+    --color-border: #282828;
+    --color-input: #343434;
+    --color-ring: #737373;
+
+    --badge-neutral-bg: #262626;
+    --badge-neutral-fg: #d4d4d4;
+
+    --badge-info-bg: #1e3a8a;
+    --badge-info-fg: #dbeafe;
+
+    --badge-success-bg: #14532d;
+    --badge-success-fg: #bbf7d0;
+
+    --badge-warning-bg: #78350f;
+    --badge-warning-fg: #fde68a;
+
+    --badge-danger-bg: #7f1d1d;
+    --badge-danger-fg: #fecaca;
+  }
+}

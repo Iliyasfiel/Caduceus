@@ -1,0 +1,164 @@
+/* =============================================
+ * breakpoints.css — 响应式断点与工具类
+ * =============================================
+ *
+ * 来源：designingDocument/caduceus-design.md §11（前端 UI 风格基线）
+ *      + designingDocument/dev-tmp/ui-design-principles-and-polish.md §4（Drawer 改造）
+ *      早期 Phase 5 响应式适配章节已合并到上述两处
+ *
+ * 断点策略：mobile-first（移动优先）
+ *   --bp-sm  : 640px   手机横屏 / 小平板
+ *   --bp-md  : 768px   平板竖屏 / 手机大屏
+ *   --bp-lg  : 1024px  桌面 / 平板横屏
+ *   --bp-xl  : 1280px  桌面宽屏
+ *
+ * 用法：`.hide-on-mobile { ... }` 默认在 mobile 隐藏，
+ *      `@media (min-width: 768px) { .hide-on-mobile { display: revert; } }`
+ *      即"≥ 768px 才显示"。这是 mobile-first 标准做法。
+ */
+
+/* ---- 断点 token（消费方用 @media (min-width: var(--bp-md)) 读取）---- */
+:root {
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+}
+
+/* ============================================================
+ * 视觉显隐工具类（不写 @media 包装，直接复用 CSS 媒体查询）
+ * ============================================================ */
+
+/* ---------- hide-on-mobile：默认隐藏，≥ md 才显示 ---------- */
+.hide-on-mobile {
+  display: none;
+}
+@media (min-width: 768px) {
+  .hide-on-mobile {
+    display: revert;
+  }
+}
+
+/* ---------- hide-on-tablet：≥ md 且 < lg 才显示 ---------- */
+.hide-on-tablet {
+  display: none;
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .hide-on-tablet {
+    display: revert;
+  }
+}
+
+/* ---------- hide-on-desktop：≥ lg 才隐藏 ---------- */
+.hide-on-desktop {
+  display: revert;
+}
+@media (min-width: 1024px) {
+  .hide-on-desktop {
+    display: none;
+  }
+}
+
+/* ============================================================
+ * 布局工具类（mobile 默认栈式 / ≥ md 改横向）
+ * ============================================================ */
+
+/* ---------- stack-on-mobile：默认 column，≥ md 改 row ---------- */
+.stack-on-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+@media (min-width: 768px) {
+  .stack-on-mobile {
+    flex-direction: row;
+    gap: var(--space-4);
+  }
+}
+
+/* ---------- stack-on-mobile-reverse：mobile 反向 ---------- */
+.stack-on-mobile-reverse {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-3);
+}
+@media (min-width: 768px) {
+  .stack-on-mobile-reverse {
+    flex-direction: row;
+    gap: var(--space-4);
+  }
+}
+
+/* ============================================================
+ * 触摸目标：触控设备最小 44×44px
+ * ============================================================ */
+
+/* ---------- touch-target：移动端点击区域 ≥ 44×44px ---------- */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ============================================================
+ * 辅助适配工具类
+ * ============================================================ */
+
+/* ---------- full-bleed-mobile：移动端去 padding ---------- */
+.full-bleed-mobile {
+  padding-left: 0;
+  padding-right: 0;
+}
+@media (min-width: 768px) {
+  .full-bleed-mobile {
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
+  }
+}
+
+/* ---------- scroll-x-mobile：表格横向滚动 ---------- */
+.scroll-x-mobile {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-x-mobile::-webkit-scrollbar {
+  height: 4px;
+}
+.scroll-x-mobile::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.scroll-x-mobile > table {
+  min-width: 100%;
+  width: max-content;
+}
+
+/* ---------- safe-bottom-mobile：iPhone 底部安全区 ---------- */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom-mobile {
+    padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-4));
+  }
+}
+@supports not (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-bottom-mobile {
+    padding-bottom: var(--space-4);
+  }
+}
+
+/* ============================================================
+ * 文本省略工具类
+ * ============================================================ */
+
+/* ---------- text-truncate：单行省略 ---------- */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- text-truncate-2：双行省略（用于卡片描述） ---------- */
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

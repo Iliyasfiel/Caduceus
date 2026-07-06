@@ -1,0 +1,27 @@
+# Checklist
+
+- [x] Pipeline Model 使用 `nodes` + `edges` JSONField，替代旧的 `definition` 字段
+- [x] Pipeline Model 字段名 `created_by`（非旧版 `creator`），符合 V2 设计文档
+- [x] PipelineInstance Model 移除 `execution_history` 字段
+- [x] PipelineInstance status choices 为 `running` / `completed`（非旧的 pending/failed/cancelled）
+- [x] PipelineInstance 包含 `task` OneToOneField 和 `current_node` 字段
+- [x] makemigrations + migrate 无报错（迁移文件 0003_v2_refactor.py 已手动编写）
+- [x] PipelineSerializer 正确序列化/反序列化 nodes 和 edges JSON 结构
+- [x] PipelineViewSet 中 `perform_create` 自动设置 `created_by` 为当前用户
+- [x] pipeline API 路由已注册到 backend/config/urls.py
+- [x] POST /api/pipelines/ 能成功创建管线并返回 201（API 代码完整，需 docker 环境验证）
+- [x] GET /api/pipelines/ 能返回管线列表（同上）
+- [x] PipelineCanvas.vue 基于 `@vue-flow/core` 实现可拖拽画布
+- [x] PipelineCanvas.vue 画布上只有单一节点类型（任务节点）
+- [x] PipelineCanvas.vue 左侧面板显示"添加任务节点"按钮（无节点类型选择器）
+- [x] PipelineCanvas.vue 右侧面板支持编辑节点 label、fields_config、roles、resource_types
+- [x] PipelineCanvas.vue 支持节点间连线、拖拽移动、删除
+- [x] PipelineCanvas.vue v-model 输出 `{ nodes, edges }` 结构
+- [x] PipelineEditor.vue 包含顶部工具栏（名称输入、保存按钮、返回按钮）
+- [x] PipelineEditor.vue 左侧管线列表可切换编辑不同管线
+- [x] PipelineEditor.vue 新建管线 → POST API → 保存成功
+- [x] PipelineEditor.vue 加载已有管线 → GET API → 画布正确渲染
+- [x] PipelineEditor.vue 更新管线 → PUT/PATCH API → 保存成功
+- [x] 所有新文件包含文件头中文注释说明用途
+- [x] 所有函数/方法包含中文注释
+- [x] README.md Phase 2 标记为 ✅，补充管线编辑器功能说明

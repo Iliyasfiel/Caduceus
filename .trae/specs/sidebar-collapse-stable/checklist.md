@@ -1,0 +1,25 @@
+# Checklist
+
+- [x] AppLayout `<script setup>` 不再引入 `useRoute`
+- [x] AppLayout 不再有 `isPipelineEditor` 计算属性
+- [x] AppLayout 根元素不再带 `layout-push` class
+- [x] `sidebarCollapsed` 默认值为 `true`（默认收起）
+- [x] 移除 `isMobile` ref 与 `checkMobile` 函数
+- [x] 移除 `@media (max-width: 768px)` 内让位规则
+- [x] 移除 `onMounted` / `onUnmounted` 中 resize 监听
+- [x] 模板中有 `<div v-if="!sidebarCollapsed" class="sidebar-overlay" @click="closeSidebar">`
+- [x] `.sidebar-overlay` 样式为 `position: fixed; inset: 0; background: rgba(0,0,0,0.5)`（统一深色遮罩，light / dark 主题都用同一颜色）
+- [x] `.sidebar-overlay` 带 opacity transition（淡入/淡出）
+- [x] `.sidebar-overlay` z-index 介于 sidebar 与 main 之间（90，介于 sidebar 95 与 main 之间）
+- [x] `.main-content` 始终 `width: 100%` + `margin-left: 0`，与 sidebar 状态完全无关
+- [x] `.main-content.sidebar-collapsed` 规则不存在
+- [x] `.sidebar` 始终 fixed + transform 滑出/滑入
+- [x] ESC 键监听：drawer 打开时按 ESC 关闭
+- [x] 汉堡按钮图标随状态切换：☰ ↔ ✕
+- [x] `npm run build` 0 错误 0 警告
+- [ ] 默认状态（任意路由）：sidebar 收起、main 满宽（需浏览器手动验证）
+- [ ] 点击汉堡：drawer 从左侧滑入 + 遮罩淡入 + 主页面降低对比度（需浏览器手动验证）
+- [ ] 点击遮罩：drawer 滑出 + 遮罩淡出 + 主页面恢复（需浏览器手动验证）
+- [ ] ESC 键：drawer 关闭（需浏览器手动验证）
+- [ ] 再次点击汉堡：drawer 关闭（需浏览器手动验证）
+- [ ] 任意页面（含 PipelineEditor）：sidebar 收起/打开时 header 不抖动、main 无重排（需浏览器手动验证）
