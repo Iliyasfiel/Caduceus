@@ -214,11 +214,11 @@ Caduceus 管理面板页面
           </div>
           <div class="form-group">
             <label>角色类型 <span class="required">*</span></label>
-            <select v-model="roleForm.role_type" class="form-input">
-              <option value="initiator">发起人</option>
-              <option value="executor">执行人</option>
-              <option value="admin">管理员</option>
-            </select>
+            <UiSelect
+              v-model="roleForm.role_type"
+              :options="roleTypeOptions"
+              placeholder="请选择角色类型"
+            />
           </div>
           <div class="form-group">
             <label>描述</label>
@@ -282,8 +282,15 @@ import client from '@/api/client'
 import { useToast } from '@/stores/toast'
 import { useConfirm } from '@/stores/confirm'
 import {
-  UiButton, UiInput, UiCard, UiBadge, UiModal, UiTabs
+  UiButton, UiInput, UiCard, UiBadge, UiModal, UiTabs, UiSelect
 } from '@/components/ui'
+
+// 角色类型选项（UiSelect 用）
+const roleTypeOptions = [
+  { label: '发起人', value: 'initiator' },
+  { label: '执行人', value: 'executor' },
+  { label: '管理员', value: 'admin' }
+]
 
 const toast = useToast()
 const confirm = useConfirm()

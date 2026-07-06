@@ -111,12 +111,12 @@
             </div>
             <div class="form-row">
               <label>类型</label>
-              <select v-model="field.type" class="form-select">
-                <option value="">请选择类型</option>
-                <option v-for="opt in fieldTypeOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
-              </select>
+              <UiSelect
+                v-model="field.type"
+                :options="fieldTypeOptions"
+                placeholder="请选择类型"
+                size="sm"
+              />
             </div>
             <div class="form-row">
               <label>优先级角色</label>
@@ -165,17 +165,12 @@
             </div>
             <div class="form-row">
               <label>角色</label>
-              <select v-model="role.role_id" class="form-select">
-                <option value="">请选择角色</option>
-                <option
-                  v-for="r in availableRoles"
-                  :key="r.id"
-                  :value="r.id"
-                  :disabled="isRoleAssigned(r.id, idx)"
-                >
-                  {{ r.label || r.name || r.id }}
-                </option>
-              </select>
+              <UiSelect
+                v-model="role.role_id"
+                :options="getRoleOptionsForIdx(idx)"
+                placeholder="请选择角色"
+                size="sm"
+              />
             </div>
             <div class="form-row">
               <label class="switch-label">
@@ -241,6 +236,7 @@ import { Controls } from '@vue-flow/controls'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
+import UiSelect from '@/components/ui/UiSelect.vue'
 
 // ===================== Props & v-model =====================
 
@@ -291,6 +287,15 @@ const fieldTypeOptions = [
   { value: 'boolean', label: '布尔值' },
   { value: 'textarea', label: '多行文本' }
 ]
+
+// 角色下拉选项（UiSelect 用）：含 disabled（已分配的角色禁用，针对每个 idx 独立判断）
+function getRoleOptionsForIdx(idx) {
+  return availableRoles.map((r) => ({
+    label: r.label || r.name || r.id,
+    value: r.id,
+    disabled: isRoleAssigned(r.id, idx)
+  }))
+}
 
 // ===================== 计算属性 =====================
 

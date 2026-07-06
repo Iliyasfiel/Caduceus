@@ -159,21 +159,13 @@ Caduceus 资源库管理页面
         <div class="form-stack">
           <div class="form-group">
             <label>资源类型 <span class="required">*</span></label>
-            <select
+            <UiSelect
               v-model="itemForm.resource_type"
-              class="form-input"
+              :options="resourceTypeOptions"
+              placeholder="请选择资源类型"
               :disabled="!!editingItem"
               @change="onItemTypeChange"
-            >
-              <option :value="null" disabled>请选择资源类型</option>
-              <option
-                v-for="type in store.resourceTypes"
-                :key="type.id"
-                :value="type.id"
-              >
-                {{ type.name }}
-              </option>
-            </select>
+            />
           </div>
           <div class="form-group">
             <label>名称 <span class="required">*</span></label>
@@ -229,21 +221,14 @@ Caduceus 资源库管理页面
               v-model.number="itemForm.field_values[field.key]"
               type="number"
             />
-            <!-- select 类型 -->
-            <select
+            <!-- select 类型：动态字段定义的选项（来自资源类型 schema） -->
+            <UiSelect
               v-else-if="field.type === 'select'"
               v-model="itemForm.field_values[field.key]"
-              class="form-input"
-            >
-              <option value="">请选择</option>
-              <option
-                v-for="opt in (field.options || [])"
-                :key="opt"
-                :value="opt"
-              >
-                {{ opt }}
-              </option>
-            </select>
+              :options="field.options || []"
+              placeholder="请选择"
+              empty-text="该字段未配置选项"
+            />
           </div>
         </div>
         <template #footer>
@@ -403,6 +388,11 @@ const statusOptions = [
   ['维修中',   'maintenance'],
   ['不可用',   'unavailable']
 ]
+
+// 资源类型选项（UiSelect 用）：转 store.resourceTypes 为 {label, value}
+const resourceTypeOptions = computed(() =>
+  store.resourceTypes.map((t) => ({ label: t.name, value: t.id }))
+)
 
 // 状态映射配置
 const statusMap = {

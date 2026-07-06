@@ -160,6 +160,10 @@ npx vite --host --port 3000
 
 > 各阶段对应的实施步骤、文件清单、验收标准见 [`caduceus-implementation.md`](designingDocument/caduceus-implementation.md)。
 
+### 后续 Polish（不单独开 Phase）
+
+- **UiSelect v2 自渲染 popper**（2026-07-06）：替换原生 `<select>`，暗色模式天然正确；新增 size（sm/md）/ searchable / multiple / asyncLoader 能力。详见 [§1.2 第 8 条 + §5.5](dev-tmp/design/ui-design-principles-and-polish.md)。**禁止在新代码中使用原生 `<select>`**
+
 ## 🤝 贡献指南
 
 欢迎贡献代码。请先阅读：

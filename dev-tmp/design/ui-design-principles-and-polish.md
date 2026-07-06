@@ -31,6 +31,7 @@
 5. **导入统一从 index.js**：禁止 import 单个组件文件路径
 6. **Props 透传**：基础组件 props 透传原生属性，避免 API 漂移
 7. **图标统一走 UiIcon**：禁止散落内联 SVG 或 emoji 字符
+8. **下拉统一用 UiSelect**（2026-07-06 新增）：**禁止使用原生 `<select>` 元素**。原因：原生 `<option>` 一旦展开背景/文字由操作系统主题接管，无法跟随设计令牌（暗色模式显示异常）；原生元素也无法使用项目统一的设计语言（圆角 / 间距 / 阴影 / 排版 / 动效）。UiSelect v2 已支持单选 / 多选 / 搜索 / 异步四种模式，所有 select 场景均应迁移到 UiSelect
 
 ### 1.3 代码组织原则
 
@@ -163,6 +164,71 @@
   - PipelineEditor.vue 缺失 `useToast` import 导致白屏 → 补 import
 
 > 状态更新：v2.0 全部 Polish 已合入 main，ui-redesign 分支关闭，main 稳定。后续视觉改动按 [caduceus-design.md §十一](../../designingDocument/caduceus-design.md) 风格基线进行。
+
+---
+
+## 5.5 UiSelect v2 重构（2026-07-06）— ✅ **已定稿，升级为前端标准组件**
+
+### 状态
+
+**v2 已正式定稿并升级为前端标准下拉组件**。禁止使用原生 `<select>` 元素（[§1.2 第 8 条](./ui-design-principles-and-polish.md#L35)）。全部业务代码中的原生 `<select>` 已批量替换（共 7 处）：
+
+| 位置 | 替换前 | 替换后 |
+|------|-------|-------|
+| [TaskDetail.vue:24](../../frontend/src/views/TaskDetail.vue#L24) | 状态选择（原生 select）| `UiSelect size="sm"` + `.status-X` 状态色保留 |
+| [ResourceList.vue:162](../../frontend/src/views/ResourceList.vue#L162) | 新建资源 → 资源类型 | `UiSelect` + `resourceTypeOptions` computed |
+| [ResourceList.vue:233](../../frontend/src/views/ResourceList.vue#L233) | 动态字段 select | `UiSelect` + `field.options` |
+| [AdminPanel.vue:217](../../frontend/src/views/AdminPanel.vue#L217) | 角色类型 | `UiSelect` + `roleTypeOptions` |
+| [PipelineCanvas.vue:114](../../frontend/src/components/PipelineCanvas.vue#L114) | 字段类型 | `UiSelect size="sm"` |
+| [PipelineCanvas.vue:168](../../frontend/src/components/PipelineCanvas.vue#L168) | 角色下拉 | `UiSelect size="sm"` + `getRoleOptionsForIdx(idx)` |
+| [ResourceSelector.vue:14](../../frontend/src/components/ResourceSelector.vue#L14) | 关联资源弹窗 | `UiSelect` + `resourceTypeOptions` |
+
+### 背景
+
+原 UiSelect 用原生 `<select>` + `appearance: none` 隐藏默认箭头，但展开后的 `<option>` 列表由浏览器接管渲染，**暗色模式下拉背景/文字无法跟随设计令牌**。触发问题：[TaskList 创建任务弹窗的管线模板下拉](../../frontend/src/views/TaskList.vue)（[TaskList.vue:142](../../frontend/src/views/TaskList.vue#L142)）在暗色模式下的显示异常。
+
+### 改造方案
+
+完全自渲染 listbox popper（`Teleport to="body"`），用 `var(--bg-surface)` / `var(--text-primary)` / `var(--color-muted)` 等设计令牌渲染 — 暗色模式天然正确。
+
+### 实现要点
+
+- **零外部依赖**：手写定位 + 键盘导航 + ARIA，约 600 行
+- **向后兼容**：原 8 个 props（modelValue / options / label / placeholder / disabled / required / error / hint）100% 保持不变。3 个现有调用点（[TaskList 状态筛选](../../frontend/src/views/TaskList.vue#L30)、[TaskList 管线模板](../../frontend/src/views/TaskList.vue#L142)、[ResourceList 类型筛选](../../frontend/src/views/ResourceList.vue#L204)）零改动即可享受暗色修复 + 键盘导航
+- **新增可选能力**（不传 = 老行为）：
+  - `searchable`：下拉顶部启用搜索框过滤
+  - `multiple`：多选模式（v-model 用 Array）
+  - `asyncLoader(q) -> Promise<options[]>`：异步加载，启用后 options prop 失效
+  - `maxDisplayChips`：多选 trigger 显示上限（默认 3）
+- **键盘交互**：↑↓ 移动高亮 / Enter 选中 / Esc 关闭并 focus 回 trigger / Tab 关闭 / 鼠标 hover 高亮
+- **定位策略**：基于 `getBoundingClientRect` 计算，自适应 flip（视口下方放不下时自动向上展开），移动端 `max-width: 95vw`
+- **点击外部关闭**：document `mousedown` 监听 + 边界判断
+- **表单兜底**：隐藏的原生 `<select>` 保留用于无障碍 / 表单序列化
+- **z-index 1001**：比 UiModal（1000）高一层，避免被 modal 遮住
+
+### Bundle 影响
+
+- UiSelect 编译产物：从 `~1.2 kB / gzip ~0.5 kB` → `7.54 kB / gzip 2.99 kB`
+- 增量 `+6.3 kB / +2.5 kB gzip`，换来完整自渲染 popper + 键盘 + ARIA + 多选 / 搜索 / 异步预留
+- `vite build` 157 modules, 0 errors, 0 warnings
+
+### 经验教训
+
+1. **原生表单控件（select / option）的主题跟随能力很弱**。业务项目应该**尽量避免**在 `<select>` 上做主题化适配 — 原生 `<option>` 一旦展开，背景/文字由操作系统主题决定
+2. **popper 类组件必须 `Teleport to="body"`**，否则会被父级 `overflow: hidden` / `transform` 裁剪
+3. **ARIA 角色必须完整**：`role="listbox"` / `role="option"` / `aria-selected` / `aria-expanded` / `aria-multiselectable`，否则屏幕阅读器不可用
+4. **键盘导航要跳过 `disabled` 选项**：常规实现容易漏，导致用户卡住
+5. **`useId()` 是 Vue 3.5+ 的稳定 API**，用于 trigger / listbox 关联，比手写 random ID 更可靠
+
+### 待跟进（不在本次范围）
+
+- [ ] `searchable` / `multiple` / `asyncLoader` 三个新能力**本次不绑定**到现有 3 个调用点，留待未来按需启用
+- [ ] PipelineCanvas / TaskDetail / AdminPanel 等地方还在用原生 `<select>`，**另一个话题**，本次不动
+- [ ] Task.status 语义重构（与 current_node 解耦）— 待 dev-tmp/design/uiselect-v2-plan.md 完成后另起一个 spec
+
+### 详细计划文档
+
+- [uiselect-v2-plan.md](./uiselect-v2-plan.md) — 重构前的完整开发计划（目标 / 非目标 / 步骤 / DoD）
 
 ---
 

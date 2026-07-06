@@ -11,20 +11,12 @@ Caduceus 资源选择器组件（模态版）
       <!-- 资源类型筛选 -->
       <div class="filter-area">
         <label class="filter-label">资源类型：</label>
-        <select
+        <UiSelect
           v-model="selectedTypeId"
-          class="type-select"
+          :options="resourceTypeOptions"
+          placeholder="请选择资源类型"
           @change="handleTypeChange"
-        >
-          <option :value="null" disabled>请选择资源类型</option>
-          <option
-            v-for="type in resourceTypes"
-            :key="type.id"
-            :value="type.id"
-          >
-            {{ type.name }}
-          </option>
-        </select>
+        />
       </div>
 
       <!-- 资源条目列表 -->
@@ -67,8 +59,9 @@ Caduceus 资源选择器组件（模态版）
  * 弹出模态框，按资源类型筛选并多选资源条目
  * 已关联的条目默认选中，确认后 emit 选中结果
  */
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { getResourceTypes, getResourceItems } from '@/api/resources'
+import UiSelect from '@/components/ui/UiSelect.vue'
 
 const props = defineProps({
   modelValue: {
@@ -87,6 +80,10 @@ const emit = defineEmits(['update:modelValue', 'update:visible', 'confirm'])
 const resourceTypes = ref([])
 // 当前选中的资源类型 ID
 const selectedTypeId = ref(null)
+// 资源类型选项（UiSelect 用）
+const resourceTypeOptions = computed(() =>
+  resourceTypes.value.map((t) => ({ label: t.name, value: t.id }))
+)
 // 当前类型下的资源条目
 const resourceItems = ref([])
 // 用户勾选的条目 ID 集合(初始化时从 modelValue 中读取)
